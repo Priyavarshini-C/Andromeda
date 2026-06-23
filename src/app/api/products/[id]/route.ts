@@ -17,6 +17,10 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // Check if the id parameter is a UUID or a slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const productCondition = isUuid ? eq(products.id, id) : eq(products.slug, id);
+
     // Fetch product with joined category and seller
     const productResult = await db
       .select({
@@ -27,7 +31,7 @@ export async function GET(
       .from(products)
       .innerJoin(categories, eq(products.categoryId, categories.id))
       .innerJoin(sellers, eq(products.sellerId, sellers.id))
-      .where(eq(products.id, id))
+      .where(productCondition)
       .limit(1);
 
     if (productResult.length === 0) {
@@ -62,7 +66,7 @@ export async function GET(
     const dbReviews = await db
       .select({ rating: reviews.rating })
       .from(reviews)
-      .where(eq(reviews.productId, id));
+      .where(eq(reviews.productId, product.id));
 
     const totalReviews = dbReviews.length;
     const reviewSum = dbReviews.reduce((sum, r) => sum + r.rating, 0);
@@ -90,7 +94,7 @@ export async function GET(
         recordedAt: priceHistory.recordedAt,
       })
       .from(priceHistory)
-      .where(eq(priceHistory.productId, id))
+      .where(eq(priceHistory.productId, product.id))
       .orderBy(desc(priceHistory.recordedAt))
       .limit(30);
 

@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CompareBar from "@/components/compare/CompareBar";
+import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   title: "Andromeda — Product Discovery & Comparison Platform",
@@ -17,10 +18,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-surface text-on-surface font-sans">
-        <Navbar />
-        <main className="flex-1 flex flex-col pb-20 sm:pb-24">{children}</main>
-        <CompareBar />
-        <Footer />
+        <SessionProvider>
+          <Navbar />
+          <main className="flex-1 flex flex-col pb-20 sm:pb-24">{children}</main>
+          <CompareBar />
+          <Footer />
+        </SessionProvider>
       </body>
     </html>
   );
