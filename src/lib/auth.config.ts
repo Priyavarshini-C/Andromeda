@@ -5,6 +5,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
+  secret: process.env.NEXTAUTH_SECRET || "dev-secret-key",
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

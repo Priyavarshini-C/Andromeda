@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+
+const CURRENT_YEAR = 2026;
 
 export default function Footer() {
   return (
@@ -64,7 +68,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 border-t border-outline-variant pt-6 text-center text-xs text-on-surface-variant">
-          <p>© {new Date().getFullYear()} Andromeda Technologies. All rights reserved. Confidential — Internal Use Only.</p>
+          <p>© {CURRENT_YEAR} Andromeda Technologies. All rights reserved. Confidential — Internal Use Only.</p>
         </div>
       </div>
     </footer>
