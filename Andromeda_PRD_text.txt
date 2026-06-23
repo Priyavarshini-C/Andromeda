@@ -1,0 +1,821 @@
+
+ANDROMEDA
+Product Discovery & Comparison Platform
+
+"One Search. Infinite Choices."
+
+Product Requirements Document
+Version 1.0  |  June 2026
+
+Prepared for Internal Use — Confidential
+
+1. Document Control
+1.1 Document Information
+
+Project Name
+Andromeda – Product Discovery & Comparison Platform
+Document Type
+Product Requirements Document (PRD)
+Version
+1.0
+Date
+June 2026
+Status
+Draft
+Tech Stack
+Next.js 15, TypeScript, Tailwind CSS, FastAPI, PostgreSQL
+Prepared By
+Product Team
+
+1.2 Revision History
+Version
+Date
+Author
+Description
+1.0
+June 2026
+Product Team
+Initial PRD draft
+
+2. Executive Summary
+Andromeda is a next-generation product discovery and comparison platform that aggregates products from multiple marketplaces, local businesses, and independent sellers into a single unified ecosystem. Inspired by the vast Andromeda Galaxy, the platform aims to become the universe of product discovery — where users search once and discover everything.
+
+The platform directly addresses fragmented online shopping by providing real-time price comparison, side-by-side product evaluation, local business visibility, and AI-powered recommendations through a single, intuitive interface.
+
+This PRD defines the full technical requirements, feature specifications, user stories, and architectural decisions for the Andromeda platform built on the Next.js 15 full-stack framework with TypeScript, Tailwind CSS, and a FastAPI microservice backend.
+
+3. Goals & Objectives
+3.1 Business Goals
+	•	Become the most trusted product discovery engine in the region within 24 months
+	•	Achieve 100,000 active users within the first year of launch
+	•	Onboard 5,000+ local businesses and independent sellers in Phase 1
+	•	Generate revenue through seller subscriptions, featured listings, and affiliate commissions
+
+3.2 User Goals
+	•	Enable users to search products once and compare across all sources instantly
+	•	Reduce time spent manually visiting multiple e-commerce platforms
+	•	Surface local and independent sellers alongside large national marketplaces
+	•	Help users make confident purchasing decisions via transparent, verified reviews
+
+3.3 Success Metrics (KPIs)
+Metric
+Target
+Timeline
+Monthly Active Users (MAU)
+100,000
+Month 12
+Search queries per day
+500,000+
+Month 6
+Registered sellers / businesses
+5,000+
+Month 6
+Product comparison sessions
+> 30% of all sessions
+Month 9
+User retention (30-day)
+> 40%
+Month 9
+Customer satisfaction score (CSAT)
+> 4.2 / 5.0
+Ongoing
+Local business registrations
+2,000+
+Month 6
+
+4. Problem Statement
+4.1 Current User Pain Points
+#
+Problem
+Impact
+1
+Products are scattered across multiple platforms (Amazon, Flipkart, local shops)
+High
+2
+Manual price comparison is slow and error-prone
+High
+3
+Local businesses have very limited online visibility
+High
+4
+Product information is inconsistent across marketplaces
+Medium
+5
+Small sellers cannot compete with large marketplace budgets
+High
+6
+Users lack contextual reviews from verified buyers
+Medium
+
+5. Target Users & Personas
+5.1 Primary Users
+Persona
+Description
+Core Needs
+Online Shopper
+Age 18–45, shops online regularly across categories
+Price comparison, reviews, fast search
+Bargain Hunter
+Deal-focused user who tracks price drops
+Deal alerts, lowest price finder, wishlists
+Student
+Budget-conscious buyer looking for best value
+Budget filters, used goods, price prediction
+Family Buyer
+Buying household products for family use
+Trusted sellers, bulk options, local delivery
+Professional
+High-value purchases, values quality and reliability
+Detailed specs, expert reviews, brand compare
+
+5.2 Secondary Users (Sellers)
+Persona
+Description
+Core Needs
+Local Business
+Small retail shop with physical presence
+Online visibility, easy product listing
+Home Entrepreneur
+Individual selling homemade or handmade goods
+Simple onboarding, reach buyers, manage orders
+Small Retailer
+Multi-category seller with limited tech resources
+Dashboard, inventory control, performance stats
+
+6. Technical Architecture & Stack
+6.1 Chosen Stack Overview
+Andromeda is built as a full-stack application using Next.js 15 (App Router) as the primary framework, with TypeScript enforced in strict mode throughout. A FastAPI microservice backend handles heavy data operations including search indexing, recommendations, and analytics processing.
+
+Layer
+Technology
+Version / Notes
+Frontend Framework
+Next.js
+15 (App Router, Server Components, Server Actions)
+Language
+TypeScript
+5.x — strict mode enabled across the entire codebase
+Styling
+Tailwind CSS
+4.x with custom design tokens and component variants
+UI Components
+shadcn/ui + Radix UI
+Accessible, headless component library
+State Management
+Zustand + TanStack Query
+Zustand for global UI state; TanStack Query v5 for server state
+Data Fetching
+TanStack Query (React Query)
+v5 — caching, background sync, optimistic updates
+Forms
+React Hook Form + Zod
+Schema-first validation with type inference
+Animation
+Framer Motion
+Page transitions, list animations, micro-interactions
+Icons
+Lucide React
+Consistent, tree-shakable icon system
+Backend API
+FastAPI (Python)
+Async microservices for search, recommendations, analytics
+ORM
+SQLAlchemy + Pydantic
+Async ORM with strict schema validation
+Authentication
+NextAuth.js v5 (Auth.js)
+JWT + OAuth (Google, GitHub); email/password login
+Database (Dev)
+SQLite
+Local development only — zero configuration
+Database (Prod)
+PostgreSQL 16
+Hosted on Supabase or Railway
+Search Engine
+Meilisearch
+Full-text, typo-tolerant search with faceted filtering
+Caching
+Redis (Upstash)
+Session store and API response caching
+File Storage
+Cloudinary / AWS S3
+Product images and seller media assets
+Email
+Resend
+Transactional email: alerts, verification, onboarding
+Deployment (Frontend)
+Vercel
+Edge functions, ISR, automatic CDN
+Deployment (Backend)
+Railway / Render
+FastAPI containerised deployment
+CI/CD
+GitHub Actions
+Lint, test, build, deploy pipeline on every PR
+Monitoring
+Sentry + Vercel Analytics
+Error tracking and Web Vitals monitoring
+Testing
+Vitest + Playwright
+Unit, integration, and end-to-end tests
+
+6.2 Next.js 15 Architecture Decisions
+App Router (Mandatory)
+	•	Use the App Router exclusively — Pages Router is prohibited
+	•	All routes defined in the app/ directory using folder-based routing conventions
+	•	Route groups used for layout segregation: (marketing), (dashboard), (auth), (seller)
+	•	Parallel routes for modal-style product comparison overlay on listing pages
+
+Server vs Client Components
+	•	Default to React Server Components (RSC) — fetch data server-side where possible
+	•	'use client' directive used only for interactive components (search bar, comparison widget, cart, alerts)
+	•	Co-locate client components with their RSC parents to minimise JavaScript bundle
+	•	Streaming with Suspense boundaries for product grids and recommendation feeds
+
+Data Fetching Strategy
+	•	Server Components: native fetch() with Next.js cache tags for product listings and categories
+	•	Static pages (ISR): category and seller pages revalidated every 60 seconds
+	•	Dynamic pages: product detail and comparison pages streamed via Suspense
+	•	Client-side: TanStack Query for search autocomplete, wishlist, cart, and real-time stock
+	•	Server Actions for all mutations: review submit, seller onboarding, alert creation
+
+Performance Targets
+Core Web Vitals Metric
+Target
+Largest Contentful Paint (LCP)
+< 2.5 seconds
+Interaction to Next Paint (INP)
+< 200 ms
+Cumulative Layout Shift (CLS)
+< 0.1
+Time to First Byte (TTFB)
+< 800 ms
+Lighthouse Performance Score
+> 90 on all key pages
+Initial JS Bundle (gzipped)
+< 150 KB
+
+6.3 Project Directory Structure
+andromeda/
+  app/
+    (marketing)/        # Landing, about, pricing
+    (auth)/             # Login, register, reset-password
+    (dashboard)/        # Profile, wishlist, orders, alerts
+    (seller)/           # Seller onboarding and dashboard
+    api/                # Next.js Route Handlers
+    products/           # Product listing and detail pages
+    compare/            # Side-by-side comparison page
+    search/             # Search results page
+    layout.tsx          # Root layout with providers
+  components/
+    ui/                 # shadcn/ui primitives
+    product/            # ProductCard, ProductGrid, PriceTag
+    search/             # SearchBar, SearchSuggestions, Filters
+    compare/            # CompareTable, CompareDrawer
+    layout/             # Navbar, Footer, Sidebar, Breadcrumb
+  lib/
+    api/                # API client wrappers (FastAPI calls)
+    auth/               # NextAuth.js configuration
+    db/                 # Prisma / Drizzle ORM setup
+    utils/              # Shared utility functions
+  hooks/                # Custom React hooks
+  store/                # Zustand global state slices
+  types/                # TypeScript interfaces and enums
+  public/              # Static assets
+  tests/               # Vitest unit + Playwright E2E
+
+7. Feature Requirements by Phase
+Phase 1 — MVP (Months 1–3)
+Feature
+Description
+Priority
+Component
+Product Search
+Search by name, category, or seller with live suggestions
+P0
+SearchBar (Client Component)
+Product Listing
+Grid and list view with image, price, rating, seller, stock
+P0
+ProductGrid (Server Component)
+Product Detail
+Full info, images, specifications, reviews, similar products
+P0
+ProductPage (Server + Suspense)
+Price Comparison
+Compare price for same product across all sellers
+P0
+CompareTable (Client Component)
+Side-by-Side Comparison
+Compare 2–4 products feature by feature
+P0
+ComparePage (Client Component)
+Category Browser
+Electronics, Fashion, Food, Books, Beauty and more
+P1
+CategoryGrid (Server Component)
+Seller Directory
+All sellers listed with products and ratings
+P1
+SellerPage (Server Component)
+User Authentication
+Email/password + Google OAuth via NextAuth.js v5
+P0
+NextAuth.js v5
+Responsive Design
+Mobile-first, fully responsive across all screen sizes
+P0
+Tailwind CSS breakpoints
+SEO Optimisation
+Metadata API, OG tags, JSON-LD structured data
+P1
+Next.js Metadata API
+
+Phase 2 — Enhanced Features (Months 4–6)
+Feature
+Description
+Priority
+Wishlist
+Save products, create named collections, track favourites
+P0
+Shopping Cart
+Add/remove items, manage quantities, persist across sessions
+P0
+Price Drop Alerts
+Email and in-app notifications when prices change
+P1
+Stock Alerts
+Notify users when an out-of-stock item becomes available
+P1
+Review System
+Rate products, submit text reviews, flag fake reviews
+P0
+Seller Onboarding
+Business registration, product upload, profile setup
+P0
+Image Optimisation
+next/image with Cloudinary CDN for all product media
+P1
+Advanced Filters
+Filter by price range, rating, brand, seller, availability
+P0
+
+Phase 3 — Smart Features (Months 7–9)
+Feature
+Description
+Priority
+AI Product Recommendations
+Based on search history, browsing behaviour, budget
+P1
+Personalised Discovery Feed
+Trending, personalised, and seasonal product suggestions
+P1
+AI Comparison Summary
+Generated summary: 'Product A is cheaper; Product B rates higher'
+P1
+Voice Search
+Web Speech API integration for hands-free product search
+P2
+Smart Autocomplete
+Meilisearch-powered suggestions with typo tolerance and facets
+P0
+
+Phase 4 — Local Business Empowerment (Months 9–12)
+Feature
+Description
+Priority
+Local Seller Marketplace
+Register, list products, manage inventory for local businesses
+P0
+Business Profile Pages
+Location, products, contact, operating hours, ratings
+P0
+Nearby Discovery
+Geolocation-based local product and seller surfacing
+P1
+Seller Inventory Dashboard
+Stock management, order tracking, and performance metrics
+P1
+
+Phase 5 — Advanced Analytics (Post-launch)
+Feature
+Description
+Priority
+Seller Analytics Dashboard
+Sales insights, product performance, customer engagement reports
+P1
+Admin Dashboard
+Manage products, sellers, users, reviews, and platform analytics
+P0
+Price Prediction Engine
+ML model forecasting discounts, sale windows, best buying time
+P2
+Authenticity Verification
+Detect fake sellers, manipulated reviews, counterfeit products
+P1
+Global Marketplace Integration
+Live product feeds from Amazon, Flipkart, Myntra, Meesho, Etsy
+P2
+
+8. User Stories & Acceptance Criteria
+ID
+As a…
+I want to…
+So that…
+Acceptance Criteria
+US-001
+Shopper
+Search for a product by name
+I can find it quickly
+Results appear within 300ms; suggestions shown after 2 characters typed
+US-002
+Shopper
+Compare prices for the same product across sellers
+I get the best deal
+Price comparison table shows all sellers sorted by price with buy links
+US-003
+Shopper
+Compare 2–4 products side by side
+I can evaluate differences
+Comparison page shows specs, price, rating in aligned columns
+US-004
+Shopper
+Add products to my wishlist
+I can save them for later
+Wishlist persists across sessions; item count shown in navbar
+US-005
+Shopper
+Receive a price drop notification
+I don't miss a good deal
+Email and in-app notification sent within 5 minutes of price change
+US-006
+Shopper
+Read and submit product reviews
+I make an informed choice
+Reviews display with date, star rating, and verified purchase badge
+US-007
+Seller
+Register my business on Andromeda
+I can reach more customers
+Onboarding flow completes in under 5 minutes with inline field validation
+US-008
+Seller
+Upload and manage my products
+My catalogue stays accurate
+Bulk upload via CSV; individual edit via seller dashboard
+US-009
+Admin
+Manage all products and sellers
+I ensure platform quality
+Admin panel with search, filter, approve, reject, and suspend actions
+US-010
+Shopper
+Discover local sellers near me
+I can support local shops
+Map or list view of sellers within a configurable distance radius
+
+9. API Design & Route Handlers
+Method
+Route
+Description
+Auth
+GET
+/api/products
+List products with filters, sorting, and pagination
+Public
+GET
+/api/products/[id]
+Get single product details including price history
+Public
+GET
+/api/search
+Full-text product search via Meilisearch
+Public
+GET
+/api/categories
+List all categories (with product counts)
+Public
+POST
+/api/compare
+Fetch comparison data for an array of product IDs
+Public
+GET
+/api/sellers
+List all registered sellers
+Public
+GET
+/api/sellers/[id]
+Get seller profile and their product catalogue
+Public
+POST
+/api/reviews
+Submit a product review
+User
+GET
+/api/user/wishlist
+Get authenticated user's saved products
+User
+POST
+/api/user/wishlist
+Add a product to wishlist
+User
+DELETE
+/api/user/wishlist/[id]
+Remove a product from wishlist
+User
+GET
+/api/user/alerts
+Get user's active price and stock alerts
+User
+POST
+/api/user/alerts
+Create a new price or stock alert
+User
+GET
+/api/seller/products
+List seller's own products
+Seller
+POST
+/api/seller/products
+Add a new product to seller catalogue
+Seller
+PUT
+/api/seller/products/[id]
+Update an existing product
+Seller
+DELETE
+/api/seller/products/[id]
+Remove a product
+Seller
+GET
+/api/admin/dashboard
+Platform-wide analytics and metrics
+Admin
+GET
+/api/admin/sellers
+List all sellers with approval status
+Admin
+PUT
+/api/admin/sellers/[id]
+Approve, reject, or suspend a seller
+Admin
+
+10. Core Database Schema
+The following entities form the core PostgreSQL schema. All tables include created_at and updated_at timestamps. UUIDs used as primary keys throughout.
+
+Entity
+Key Fields
+Relationships
+users
+id, name, email, passwordHash, role (user/seller/admin), emailVerified, createdAt
+has many: wishlists, reviews, alerts, orders
+products
+id, title, slug, description, images[], price, stock, categoryId, sellerId, rating, reviewCount
+belongs to: category, seller; has many: reviews, price_history
+sellers
+id, businessName, slug, description, location, logoUrl, userId, isVerified, rating
+has many: products; belongs to: user
+categories
+id, name, slug, icon, parentId (self-referential for sub-categories)
+has many: products; self-join for hierarchy
+reviews
+id, productId, userId, rating (1–5), content, isVerified, helpfulCount, createdAt
+belongs to: product, user
+price_history
+id, productId, sellerId, price, currency, recordedAt
+belongs to: product, seller (time-series data)
+wishlists
+id, userId, productId, collectionName, addedAt
+belongs to: user, product
+alerts
+id, userId, productId, alertType (price/stock), targetPrice, isActive, lastTriggeredAt
+belongs to: user, product
+comparisons
+id, sessionId, productIds[] (JSON), createdAt, userId (nullable)
+references: products
+
+11. Non-Functional Requirements
+Category
+Requirement
+Specification
+Performance
+API response time (p95)
+< 200 ms cached; < 500 ms uncached
+Performance
+Search response time
+< 100 ms via Meilisearch
+Scalability
+Concurrent users
+10,000+ simultaneous users without degradation
+Scalability
+Product catalogue size
+Support 10 million+ product records
+Availability
+Monthly uptime SLA
+99.9% uptime (< 45 min downtime per month)
+Security
+Authentication tokens
+JWT with 15-min access token + 7-day refresh token
+Security
+Data encryption
+HTTPS/TLS 1.3; database encryption at rest
+Security
+Rate limiting
+100 req/min per IP on search; 20 req/min on write endpoints
+Accessibility
+WCAG compliance
+WCAG 2.1 Level AA — keyboard navigable, screen-reader friendly
+SEO
+Core Web Vitals
+All green; Lighthouse score > 90 on key pages
+Internationalisation
+Currency support
+INR default; USD and EUR planned for Phase 2
+Mobile
+Responsive breakpoints
+320px (mobile), 768px (tablet), 1024px, 1440px (desktop)
+
+12. Security Requirements
+	•	All protected API routes validated via NextAuth.js session or verified JWT in middleware
+	•	Role-based access control (RBAC): user / seller / admin roles enforced at middleware and route level
+	•	Input validation via Zod schemas on all Server Actions and Route Handlers
+	•	SQL injection protection via parameterised queries through Prisma or SQLAlchemy
+	•	XSS prevention: React default escaping plus Content Security Policy (CSP) headers
+	•	CORS configured to allow requests only from Andromeda-owned domains
+	•	Seller product listings require admin or automated review before going live
+	•	Fake review detection using NLP heuristics, velocity checks, and anomaly detection
+	•	GDPR-compliant: user data export and account deletion endpoints provided
+	•	All secrets managed via Vercel Environment Variables or Doppler — never committed to source
+	•	Dependency scanning via GitHub Dependabot; security patches applied within 48 hours
+
+13. Testing Strategy
+Test Type
+Tool
+Coverage Target
+Focus Area
+Unit Tests
+Vitest
+> 80% line coverage
+Utility functions, custom hooks, Zustand store logic
+Component Tests
+Vitest + Testing Library
+> 70% component coverage
+UI components, form validation, conditional rendering
+API Tests
+Vitest + Supertest
+> 90% route coverage
+All Next.js Route Handlers and Server Actions
+E2E Tests
+Playwright
+All critical user paths
+Search, compare, auth flow, wishlist, seller onboarding
+Performance Tests
+Lighthouse CI + k6
+Every production deploy
+Core Web Vitals, API load testing at 1,000 concurrent
+Accessibility Tests
+axe-core + Playwright
+All public pages
+WCAG 2.1 AA compliance checks
+
+14. Deployment & Infrastructure
+14.1 Environments
+Environment
+URL Pattern
+Purpose
+Deploy Trigger
+Development
+localhost:3000
+Local development
+Manual / npm run dev
+Preview
+andromeda-[hash].vercel.app
+PR previews and stakeholder review
+Pull Request opened or updated
+Staging
+staging.andromeda.app
+Pre-production QA and UAT
+Merge to staging branch
+Production
+andromeda.app
+Live users
+Merge to main + manual approval gate
+
+14.2 CI/CD Pipeline (GitHub Actions)
+	•	Code pushed or PR opened — ESLint linting and TypeScript type check (tsc --noEmit)
+	•	Unit and integration tests executed via Vitest with coverage report
+	•	Build verification: next build must complete without errors
+	•	Preview deployment to Vercel — unique URL generated per PR
+	•	Playwright E2E tests run against the preview deployment URL
+	•	Lighthouse CI checks all key pages — pipeline fails if any score < 85
+	•	Manual approval gate required before proceeding to production
+	•	Production deploy to Vercel (Next.js) and Railway (FastAPI microservice)
+	•	Post-deploy smoke tests verify critical user paths are functional
+	•	Sentry release created; Vercel Analytics dashboard auto-updated
+
+15. Future Vision & Roadmap
+Initiative
+Description
+Timeline
+AI Shopping Assistant
+Conversational interface: 'Best earbuds under 2000', 'Cake shop near me'
+Q3 2027
+Price Prediction Engine
+ML model predicting discounts, sale windows, and optimal buying time
+Q4 2027
+Global Marketplace Integration
+Live product feeds from Amazon, Flipkart, Myntra, Meesho, and Etsy
+Q1 2028
+Product Authenticity AI
+Detect counterfeit products and fraudulent seller patterns via ML
+Q2 2028
+Mobile App (React Native)
+iOS and Android native app powered by shared API and design system
+Q2 2028
+B2B Procurement Module
+Bulk ordering for businesses; RFQ comparison and vendor evaluation
+Q3 2028
+Andromeda Pay
+In-platform escrow payments and integrated checkout experience
+Q4 2028
+
+16. Assumptions, Constraints & Risks
+16.1 Assumptions
+	•	Third-party marketplace APIs (Amazon, Flipkart) will remain stable and accessible
+	•	Target users have access to modern browsers supporting ES2020+ features
+	•	Sellers have basic digital literacy sufficient to navigate the onboarding flow
+	•	Meilisearch cloud tier will support MVP search volume without degradation
+
+16.2 Constraints
+	•	MVP must be delivered within 3 months with a development team of 4 engineers
+	•	Initial budget limits AI recommendation features to Phase 3 and beyond
+	•	Platform must comply with Indian IT Act, IT Rules 2021, and consumer protection regulations
+	•	No native mobile application in scope for v1.0 — responsive web only
+
+16.3 Risk Register
+Risk
+Likelihood
+Impact
+Mitigation Strategy
+Third-party API rate limits or breaking changes
+Medium
+High
+Abstract all external APIs behind a service layer; aggressive caching with Redis
+Fake seller registrations at scale
+High
+High
+Email verification, admin review queue, AI fraud detection in Phase 5
+Search latency degradation at scale
+Medium
+High
+Meilisearch with Redis caching; CDN for static assets; horizontal scaling
+Seller adoption slower than projected
+Medium
+Medium
+Incentive programme; simplified onboarding; dedicated seller success team
+Review manipulation and fake ratings
+High
+Medium
+Verified purchase badge; NLP review scoring; rate limiting on review submissions
+Data breach or security incident
+Low
+Critical
+Regular penetration testing; encrypted secrets; incident response plan in place
+
+17. Glossary
+Term
+Definition
+RSC
+React Server Component — renders entirely on the server with zero client-side JavaScript
+ISR
+Incremental Static Regeneration — Next.js feature to revalidate cached pages on a schedule
+PRD
+Product Requirements Document — this document
+P0
+Priority 0 — must-have for MVP launch; blocks release if missing
+P1
+Priority 1 — important feature, deliver in the next phase after MVP
+P2
+Priority 2 — nice-to-have, planned for future consideration
+RBAC
+Role-Based Access Control — permissions granted based on user role
+CSAT
+Customer Satisfaction Score — user-reported satisfaction rating
+MAU
+Monthly Active Users — users who perform at least one action per month
+LCP
+Largest Contentful Paint — Core Web Vitals metric for perceived load speed
+INP
+Interaction to Next Paint — replaces FID in Core Web Vitals (Chrome 2024+)
+CLS
+Cumulative Layout Shift — measures visual stability of a page
+KPI
+Key Performance Indicator — a measurable target for business success
+ORM
+Object-Relational Mapper — abstracts database queries (Prisma or SQLAlchemy)
+CSP
+Content Security Policy — HTTP header to mitigate XSS attacks
+RFQ
+Request for Quotation — used in B2B procurement module (Phase 5)
+
+— End of Document —
