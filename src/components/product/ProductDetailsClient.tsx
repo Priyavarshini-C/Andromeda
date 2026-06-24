@@ -2,18 +2,50 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Star, Scale, Heart, Check, ShieldCheck, Truck, ShoppingCart } from "lucide-react";
-import { Product, SellerListing } from "@/lib/utils/mock-data";
+import { Star, Scale, Heart, Check, ShieldCheck, Truck, ShoppingCart, Store, Zap, TrendingDown, ExternalLink } from "lucide-react";
 import PriceTag from "@/components/product/PriceTag";
 import StockBadge from "@/components/product/StockBadge";
 import { useCompareStore } from "@/store/compare.store";
 
+export interface CustomSellerListing {
+  id: string;
+  source: "amazon" | "flipkart" | "meesho" | "local";
+  sellerId?: string;
+  sellerName: string;
+  isVerified: boolean;
+  price: number;
+  stock: number;
+  deliveryDays: number;
+  deliveryFee: number;
+  rating: number;
+  shopUrl: string;
+}
+
+export interface CustomProduct {
+  id: string;
+  title: string;
+  brand: string;
+  slug: string;
+  description: string;
+  images: string[];
+  price: number;
+  listPrice: number;
+  stock: number;
+  categoryId: string;
+  rating: number;
+  reviewCount: number;
+  specs: Record<string, string>;
+  sellers: CustomSellerListing[];
+  priceHistory: { date: string; price: number }[];
+  reviews: { id: string; userName: string; rating: number; comment: string; date: string; isVerified: boolean }[];
+}
+
 interface ProductDetailsClientProps {
-  product: Product;
+  product: CustomProduct;
 }
 
 export default function ProductDetailsClient({ product }: ProductDetailsClientProps) {
-  const { id, title, brand, description, images, price, listPrice, rating, reviewCount, sellers, stock } = product;
+  const { id, title, brand, description, images, listPrice, rating, reviewCount, sellers, stock } = product;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
@@ -35,8 +67,20 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     }
   };
 
-  // Find the best price seller
-  const lowestPrice = Math.min(...sellers.map((s) => s.price));
+  // Find the overall lowest base price (for display at the top card)
+  const lowestBasePrice = Math.min(...sellers.map((s) => s.price));
+
+  // Find Cheapest (minimum total cost: price + deliveryFee)
+  const cheapestListing = sellers.reduce((cheapest, current) => {
+    const currentTotal = current.price + current.deliveryFee;
+    const cheapestTotal = cheapest.price + cheapest.deliveryFee;
+    return currentTotal < cheapestTotal ? current : cheapest;
+  }, sellers[0]);
+
+  // Find Fastest (minimum deliveryDays)
+  const fastestListing = sellers.reduce((fastest, current) => {
+    return current.deliveryDays < fastest.deliveryDays ? current : fastest;
+  }, sellers[0]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
@@ -102,7 +146,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
             Best Starting Price
           </span>
-          <PriceTag price={price} listPrice={listPrice} size="lg" />
+          <PriceTag price={lowestBasePrice} listPrice={listPrice} size="lg" />
           <div className="flex items-center gap-2 mt-1">
             <StockBadge stock={stock} />
             <span className="text-xs text-on-surface-variant font-medium">aggregate stock across all stores</span>
@@ -157,36 +201,104 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
 
         {/* Sellers & Price Comparison Matrix */}
         <div className="mt-8 border-t border-slate-100 pt-6">
-          <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-4">
-            Seller &amp; Price Comparison
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              Seller &amp; Price Comparison
+            </h3>
+            <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded-full">
+              Local vs Online
+            </span>
+          </div>
+
           <div className="flex flex-col gap-3">
             {sellers.map((listing) => {
-              const isBestPrice = listing.price === lowestPrice;
+              const isCheapest = listing.price + listing.deliveryFee === cheapestListing.price + cheapestListing.deliveryFee;
+              const isFastest = listing.deliveryDays === fastestListing.deliveryDays;
+              const isLocal = listing.source === "local";
+              
+              let sourceBadge = null;
+              let brandColorClass = "border-outline-variant bg-white";
+              let iconColor = "text-secondary";
+              let sourceIcon = <Truck className="h-5 w-5" />;
+              
+              if (listing.source === "amazon") {
+                sourceBadge = (
+                  <span className="inline-flex text-[9px] font-extrabold uppercase tracking-wider text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
+                    Amazon
+                  </span>
+                );
+                brandColorClass = "border-outline-variant/60 bg-amber-500/[0.02]";
+                iconColor = "text-amber-500";
+              } else if (listing.source === "flipkart") {
+                sourceBadge = (
+                  <span className="inline-flex text-[9px] font-extrabold uppercase tracking-wider text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
+                    Flipkart
+                  </span>
+                );
+                brandColorClass = "border-outline-variant/60 bg-blue-500/[0.02]";
+                iconColor = "text-blue-500";
+              } else if (listing.source === "meesho") {
+                sourceBadge = (
+                  <span className="inline-flex text-[9px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded">
+                    Meesho
+                  </span>
+                );
+                brandColorClass = "border-outline-variant/60 bg-rose-500/[0.02]";
+                iconColor = "text-rose-500";
+              } else {
+                sourceBadge = (
+                  <span className="inline-flex text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    Local Store
+                  </span>
+                );
+                brandColorClass = "border-emerald-500/20 bg-emerald-500/[0.02]";
+                iconColor = "text-emerald-600";
+                sourceIcon = <Store className="h-5 w-5" />;
+              }
+
+              // Highlight if cheapest
+              const cardBorder = isCheapest
+                ? "border-emerald-500/40 shadow-observatory ring-1 ring-emerald-500/20"
+                : "border-outline-variant";
+
               return (
                 <div
-                  key={listing.sellerId}
-                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-xl p-4 gap-4 transition-all hover:shadow-observatory ${
-                    isBestPrice
-                      ? "border-success/30 bg-success/2"
-                      : "border-outline-variant bg-white"
-                  }`}
+                  key={listing.id || listing.sellerId}
+                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-xl p-4 gap-4 transition-all hover:shadow-observatory ${brandColorClass} ${cardBorder}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                      <Truck className="h-5 w-5 text-secondary" />
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-container ${iconColor}`}>
+                      {sourceIcon}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-primary flex items-center gap-1.5">
+                      <h4 className="text-sm font-bold text-primary flex flex-wrap items-center gap-1.5">
                         {listing.sellerName}
-                        {listing.isVerified && (
-                          <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase text-secondary bg-secondary/10 px-1.5 py-0.2 rounded-full">
+                        {sourceBadge}
+                        {listing.isVerified && isLocal && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase text-secondary bg-secondary/10 px-1.5 py-0.2 rounded-full">
                             <ShieldCheck className="h-3 w-3 inline text-secondary fill-current" /> Verified
                           </span>
                         )}
                       </h4>
-                      <p className="text-xs text-on-surface-variant font-medium mt-0.5">
-                        Rating: <strong className="text-slate-700">{listing.rating.toFixed(1)}/5.0</strong> · Delivery in {listing.deliveryDays} days
+                      <p className="text-xs text-on-surface-variant font-medium mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                        <span>Rating: <strong className="text-slate-700">{listing.rating.toFixed(1)}/5.0</strong></span>
+                        <span>·</span>
+                        <span className="flex items-center gap-0.5">
+                          <Zap className={`h-3 w-3 ${isFastest ? "text-purple-500 fill-current" : "text-slate-400"}`} />
+                          Delivery: <strong className="text-slate-700">
+                            {listing.deliveryDays === 0
+                              ? "Same Day (Instant)"
+                              : listing.deliveryDays === 1
+                              ? "1 Day (Tomorrow)"
+                              : `${listing.deliveryDays} Days`}
+                          </strong>
+                        </span>
+                        {listing.deliveryFee > 0 && (
+                          <>
+                            <span>·</span>
+                            <span>Shipping: ₹{listing.deliveryFee}</span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -196,19 +308,37 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                       <span className="text-lg font-extrabold text-primary">
                         ₹{listing.price.toLocaleString("en-IN")}
                       </span>
-                      {isBestPrice && (
-                        <span className="inline-flex text-[9px] font-bold text-success uppercase tracking-wider mt-0.5">
-                          Best Price Deal
-                        </span>
-                      )}
+                      <div className="flex flex-wrap gap-1 mt-0.5 justify-end">
+                        {isCheapest && (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 uppercase tracking-wide">
+                            <TrendingDown className="h-3 w-3" /> Cheapest Deal
+                          </span>
+                        )}
+                        {isFastest && (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-bold text-purple-600 uppercase tracking-wide">
+                            <Zap className="h-3 w-3 fill-current" /> Fastest Delivery
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <a
                       href={listing.shopUrl}
+                      target={isLocal ? "_self" : "_blank"}
+                      rel={isLocal ? undefined : "noopener noreferrer"}
                       className="flex items-center gap-1.5 bg-secondary text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-secondary/90 transition-colors"
                     >
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      Visit Store
+                      {isLocal ? (
+                        <>
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          Visit Store
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Buy Online
+                        </>
+                      )}
                     </a>
                   </div>
                 </div>

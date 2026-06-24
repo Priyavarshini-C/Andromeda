@@ -159,28 +159,42 @@ async function ProductContent({ params }: ProductPageProps) {
 
   const otherSellers = allSellers.filter((s) => s.id !== dbSeller.id).slice(0, 2);
 
-  const sellersList = [
+  // Import mock third-party listings
+  const { getMarketplaceListings } = require("@/lib/services/marketplace-aggregator");
+  const onlineListings = getMarketplaceListings(dbProduct.id, dbProduct.title, dbProduct.price);
+
+  const localSellersList = [
     {
+      id: dbSeller.id,
+      source: "local" as const,
       sellerId: dbSeller.id,
       sellerName: dbSeller.businessName,
-      isVerified: dbSeller.isVerified,
+      isVerified: !!dbSeller.isVerified,
       price: dbProduct.price,
       stock: dbProduct.stock,
-      deliveryDays: 2,
+      deliveryDays: 0, // Same Day / 2 hrs
+      deliveryFee: 0, // Free local pickup
       rating: dbSeller.rating || 4.5,
-      shopUrl: "#",
+      shopUrl: `/stores/${dbSeller.slug}`,
     },
     ...otherSellers.map((s, idx) => ({
+      id: s.id,
+      source: "local" as const,
       sellerId: s.id,
       sellerName: s.businessName,
-      isVerified: s.isVerified,
-      price: Math.round(dbProduct.price * (1 + (idx + 1) * 0.05)), // 5% and 10% markup
+      isVerified: !!s.isVerified,
+      price: Math.round(dbProduct.price * (1 + (idx + 1) * 0.03)), // 3% and 6% local markup
       stock: Math.round(dbProduct.stock * 0.7),
-      deliveryDays: 3 + idx,
+      deliveryDays: idx === 0 ? 0 : 1, // Same Day or Next Day
+      deliveryFee: 30, // Small local delivery fee
       rating: s.rating || 4.2,
-      shopUrl: "#",
+      shopUrl: `/stores/${s.slug}`,
     })),
   ];
+
+  // Combine both lists
+  const sellersList = [...localSellersList, ...onlineListings];
+
 
   // 6. Map to the full product object expected by ProductDetailsClient
   const mappedProduct = {
