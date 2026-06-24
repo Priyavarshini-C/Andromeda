@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
 
     const actualProductIds = dbProducts.map((p) => p.product.id);
 
+    // Fetch all active sellers to mock comparisons dynamically
+    const allSellers = await db
+      .select()
+      .from(sellers)
+      .where(eq(sellers.status, "active"));
+
     // Fetch reviews for these products to compute rating summaries
     const dbReviews = await db
       .select({
@@ -199,6 +205,31 @@ export async function POST(request: NextRequest) {
           slug: seller.slug,
           is_verified: seller.isVerified,
         },
+        sellers: [
+          {
+            sellerId: seller.id,
+            sellerName: seller.businessName,
+            isVerified: seller.isVerified,
+            price: product.price,
+            stock: product.stock,
+            deliveryDays: 2,
+            rating: seller.rating || 4.5,
+            shopUrl: "#",
+          },
+          ...allSellers
+            .filter((s) => s.id !== seller.id)
+            .slice(0, 2)
+            .map((s, idx) => ({
+              sellerId: s.id,
+              sellerName: s.businessName,
+              isVerified: s.isVerified,
+              price: Math.round(product.price * (1 + (idx + 1) * 0.05)),
+              stock: Math.round(product.stock * 0.7),
+              deliveryDays: 3 + idx,
+              rating: s.rating || 4.2,
+              shopUrl: "#",
+            })),
+        ],
         category: {
           id: category.id,
           name: category.name,

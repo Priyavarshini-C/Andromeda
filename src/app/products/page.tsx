@@ -2,7 +2,9 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { Laptop, BookOpen, Home, Shirt, SlidersHorizontal, Star } from "lucide-react";
 import ProductGrid from "@/components/product/ProductGrid";
-import { PRODUCTS, CATEGORIES, getProductsBySearch, getProductsByCategory } from "@/lib/utils/mock-data";
+import { db } from "@/lib/db";
+import { products, categories, sellers } from "@/lib/db/schema";
+import { eq, and, like, or, sql, desc } from "drizzle-orm";
 
 export const unstable_instant = {
   prefetch: "static",
@@ -41,25 +43,139 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
   const query = params.q || "";
   const categorySlug = params.category || "";
 
-  let filteredProducts = PRODUCTS;
   let title = "All Products";
   let subtitle = "Discover and compare top listings across the platform";
 
-  // Apply search query
-  if (query) {
-    filteredProducts = getProductsBySearch(query);
-    title = `Search Results`;
-    subtitle = `Showing matches for "${query}"`;
-  } 
-  // Apply category filter
-  else if (categorySlug) {
-    const category = CATEGORIES.find((c) => c.slug === categorySlug);
-    if (category) {
-      filteredProducts = getProductsByCategory(categorySlug);
-      title = category.name;
-      subtitle = `Explore and compare items in ${category.name}`;
+  // 1. Build category condition and query category
+  let categoryCondition;
+  if (categorySlug) {
+    const cat = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.slug, categorySlug))
+      .limit(1);
+    if (cat.length > 0) {
+      categoryCondition = eq(products.categoryId, cat[0].id);
+      title = cat[0].name;
+      subtitle = `Explore and compare items in ${cat[0].name}`;
     }
   }
+
+  // 2. Build search query condition
+  let searchCondition;
+  if (query) {
+    searchCondition = or(
+      like(products.title, `%${query}%`),
+      like(products.brand, `%${query}%`),
+      like(products.description, `%${query}%`)
+    );
+    title = `Search Results`;
+    subtitle = `Showing matches for "${query}"`;
+  }
+
+  // 3. Query all products matching the conditions
+  const conditions = [eq(products.status, "active")];
+  if (categoryCondition) conditions.push(categoryCondition);
+  if (searchCondition) conditions.push(searchCondition);
+
+  const dbProducts = await db
+    .select({
+      product: products,
+      category: categories,
+      seller: sellers,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .innerJoin(sellers, eq(products.sellerId, sellers.id))
+    .where(and(...conditions))
+    .orderBy(desc(products.createdAt));
+
+  // 4. Query categories and product counts for the sidebar
+  const categoriesWithCounts = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      slug: categories.slug,
+      icon: categories.icon,
+      productCount: sql<number>`CAST((SELECT COUNT(*) FROM ${products} WHERE ${products.categoryId} = ${categories.id} AND ${products.status} = 'active') AS INTEGER)`,
+    })
+    .from(categories)
+    .orderBy(categories.sortOrder);
+
+  // 5. Query total active product count
+  const totalProductsResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(products)
+    .where(eq(products.status, "active"));
+  const totalProductsCount = Number(totalProductsResult[0]?.count || 0);
+
+  // 6. Query all active sellers to mock comparisons dynamically
+  const allSellers = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.status, "active"));
+
+  // 7. Map database rows to the Product format expected by the frontend components
+  const mappedProducts = dbProducts.map(({ product, category, seller }) => {
+    let images: string[] = [];
+    try {
+      images = JSON.parse(product.images);
+    } catch {
+      images = product.images ? [product.images] : [];
+    }
+
+    let specs: Record<string, string> = {};
+    try {
+      specs = JSON.parse(product.specs);
+    } catch {
+      specs = {};
+    }
+
+    // Filter other sellers to create mock comparative offers
+    const otherSellers = allSellers.filter((s) => s.id !== seller.id).slice(0, 2);
+
+    const sellersList = [
+      {
+        sellerId: seller.id,
+        sellerName: seller.businessName,
+        isVerified: seller.isVerified,
+        price: product.price,
+        stock: product.stock,
+        deliveryDays: 2,
+        rating: seller.rating || 4.5,
+        shopUrl: "#",
+      },
+      ...otherSellers.map((s, idx) => ({
+        sellerId: s.id,
+        sellerName: s.businessName,
+        isVerified: s.isVerified,
+        price: Math.round(product.price * (1 + (idx + 1) * 0.05)), // 5% and 10% price markup
+        stock: Math.round(product.stock * 0.7),
+        deliveryDays: 3 + idx,
+        rating: s.rating || 4.2,
+        shopUrl: "#",
+      })),
+    ];
+
+    return {
+      id: product.id,
+      title: product.title,
+      brand: product.brand || "",
+      slug: product.slug,
+      description: product.description || "",
+      images,
+      price: product.price,
+      listPrice: product.originalPrice || product.price,
+      stock: product.stock,
+      categoryId: product.categoryId,
+      rating: product.rating || 4.0,
+      reviewCount: product.reviewCount || 0,
+      specs,
+      sellers: sellersList,
+      priceHistory: [],
+      reviews: [],
+    };
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full">
@@ -70,7 +186,7 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
           {title}
         </h1>
         <p className="mt-2 text-sm text-on-surface-variant font-medium">
-          {subtitle} ({filteredProducts.length} items found)
+          {subtitle} ({mappedProducts.length} items found)
         </p>
       </div>
 
@@ -96,12 +212,11 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                     !categorySlug ? "bg-white/20 text-white" : "bg-surface-container text-on-surface-variant"
                   }`}>
-                    {PRODUCTS.length}
+                    {totalProductsCount}
                   </span>
                 </Link>
               </li>
-              {CATEGORIES.map((cat) => {
-                const count = PRODUCTS.filter((p) => p.categoryId === cat.id).length;
+              {categoriesWithCounts.map((cat) => {
                 const Icon = cat.slug === "electronics" ? Laptop : 
                             cat.slug === "books" ? BookOpen : 
                             cat.slug === "home-kitchen" ? Home : Shirt;
@@ -122,7 +237,7 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                         isSelected ? "bg-white/20 text-white" : "bg-surface-container text-on-surface-variant"
                       }`}>
-                        {count}
+                        {cat.productCount}
                       </span>
                     </Link>
                   </li>
@@ -173,7 +288,7 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
 
         {/* Main Product Grid Container */}
         <div className="flex-1">
-          <ProductGrid products={filteredProducts} emptyMessage="No products match your search/category selection." />
+          <ProductGrid products={mappedProducts} emptyMessage="No products match your search/category selection." />
         </div>
 
       </div>

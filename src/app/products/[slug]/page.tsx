@@ -2,9 +2,11 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Star, ShieldCheck } from "lucide-react";
-import { PRODUCTS, getProductBySlug } from "@/lib/utils/mock-data";
 import ProductDetailsClient from "@/components/product/ProductDetailsClient";
 import type { Metadata } from "next";
+import { db } from "@/lib/db";
+import { products, categories, sellers, reviews, priceHistory } from "@/lib/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 
 export const unstable_instant = {
   prefetch: "static",
@@ -14,7 +16,12 @@ export const unstable_instant = {
 };
 
 export async function generateStaticParams() {
-  return PRODUCTS.map((p) => ({
+  const allProducts = await db
+    .select({ slug: products.slug })
+    .from(products)
+    .where(eq(products.status, "active"));
+  
+  return allProducts.map((p) => ({
     slug: p.slug,
   }));
 }
@@ -27,15 +34,22 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
-  if (!product) {
+  const productResult = await db
+    .select()
+    .from(products)
+    .where(eq(products.slug, slug))
+    .limit(1);
+
+  if (productResult.length === 0) {
     return {
       title: "Product Not Found — Andromeda",
     };
   }
+
+  const product = productResult[0];
   return {
     title: `${product.title} — Andromeda`,
-    description: product.description.substring(0, 160),
+    description: product.description?.substring(0, 160) || "",
   };
 }
 
@@ -56,11 +70,137 @@ export default function ProductPage({ params }: ProductPageProps) {
 
 async function ProductContent({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
 
-  if (!product) {
+  // 1. Fetch product with joined category and seller
+  const productResult = await db
+    .select({
+      product: products,
+      category: categories,
+      seller: sellers,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .innerJoin(sellers, eq(products.sellerId, sellers.id))
+    .where(eq(products.slug, slug))
+    .limit(1);
+
+  if (productResult.length === 0) {
     notFound();
   }
+
+  const { product: dbProduct, category: dbCategory, seller: dbSeller } = productResult[0];
+
+  // 2. Parse JSON fields
+  let images: string[] = [];
+  try {
+    images = JSON.parse(dbProduct.images);
+  } catch {
+    images = dbProduct.images ? [dbProduct.images] : [];
+  }
+
+  let specs: Record<string, string> = {};
+  try {
+    specs = JSON.parse(dbProduct.specs);
+  } catch {
+    specs = {};
+  }
+
+  // 3. Fetch reviews and resolve reviewer names
+  const dbReviews = await db
+    .select({
+      id: reviews.id,
+      rating: reviews.rating,
+      comment: reviews.content,
+      title: reviews.title,
+      userName: sql<string>`(SELECT name FROM users WHERE users.id = ${reviews.userId})`,
+      isVerified: reviews.isVerifiedPurchase,
+      createdAt: reviews.createdAt,
+    })
+    .from(reviews)
+    .where(eq(reviews.productId, dbProduct.id))
+    .orderBy(desc(reviews.createdAt));
+
+  const mappedReviews = dbReviews.map((r) => ({
+    id: r.id,
+    userName: r.userName || "Anonymous User",
+    rating: r.rating,
+    comment: r.comment || "",
+    date: r.createdAt instanceof Date 
+      ? r.createdAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) 
+      : new Date(r.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+    isVerified: !!r.isVerified,
+  }));
+
+  // 4. Fetch price history
+  const dbPriceHistory = await db
+    .select({
+      price: priceHistory.price,
+      recordedAt: priceHistory.recordedAt,
+    })
+    .from(priceHistory)
+    .where(eq(priceHistory.productId, dbProduct.id))
+    .orderBy(desc(priceHistory.recordedAt))
+    .limit(30);
+
+  const mappedPriceHistory = dbPriceHistory
+    .map((ph) => ({
+      date: ph.recordedAt instanceof Date 
+        ? ph.recordedAt.toISOString().split("T")[0] 
+        : new Date(ph.recordedAt).toISOString().split("T")[0],
+      price: ph.price,
+    }))
+    .reverse();
+
+  // 5. Fetch all active sellers to mock comparative offers
+  const allSellers = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.status, "active"));
+
+  const otherSellers = allSellers.filter((s) => s.id !== dbSeller.id).slice(0, 2);
+
+  const sellersList = [
+    {
+      sellerId: dbSeller.id,
+      sellerName: dbSeller.businessName,
+      isVerified: dbSeller.isVerified,
+      price: dbProduct.price,
+      stock: dbProduct.stock,
+      deliveryDays: 2,
+      rating: dbSeller.rating || 4.5,
+      shopUrl: "#",
+    },
+    ...otherSellers.map((s, idx) => ({
+      sellerId: s.id,
+      sellerName: s.businessName,
+      isVerified: s.isVerified,
+      price: Math.round(dbProduct.price * (1 + (idx + 1) * 0.05)), // 5% and 10% markup
+      stock: Math.round(dbProduct.stock * 0.7),
+      deliveryDays: 3 + idx,
+      rating: s.rating || 4.2,
+      shopUrl: "#",
+    })),
+  ];
+
+  // 6. Map to the full product object expected by ProductDetailsClient
+  const mappedProduct = {
+    id: dbProduct.id,
+    title: dbProduct.title,
+    brand: dbProduct.brand || "",
+    slug: dbProduct.slug,
+    description: dbProduct.description || "",
+    images,
+    price: dbProduct.price,
+    listPrice: dbProduct.originalPrice || dbProduct.price,
+    stock: dbProduct.stock,
+    categoryId: dbProduct.categoryId,
+    rating: dbProduct.rating || 4.0,
+    reviewCount: dbReviews.length,
+    specs,
+    sellers: sellersList,
+    priceHistory: mappedPriceHistory,
+    reviews: mappedReviews,
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
@@ -76,7 +216,7 @@ async function ProductContent({ params }: ProductPageProps) {
       </div>
 
       {/* Main product interactive block (Client Component) */}
-      <ProductDetailsClient product={product} />
+      <ProductDetailsClient product={mappedProduct} />
 
       {/* Specifications Grid */}
       <section className="mt-12 border-t border-outline-variant/30 pt-8">
@@ -86,7 +226,7 @@ async function ProductContent({ params }: ProductPageProps) {
         <div className="bg-surface-card rounded-xl border border-outline-variant overflow-hidden shadow-observatory max-w-3xl">
           <table className="w-full text-left border-collapse text-xs">
             <tbody>
-              {Object.entries(product.specs || {}).map(([key, val], index) => (
+              {Object.entries(mappedProduct.specs || {}).map(([key, val], index) => (
                 <tr
                   key={key}
                   className={`border-b border-outline-variant/30 last:border-b-0 ${
@@ -110,11 +250,11 @@ async function ProductContent({ params }: ProductPageProps) {
       <section className="mt-12 border-t border-outline-variant/30 pt-8">
         <div className="max-w-3xl">
           <h2 className="text-lg font-bold text-primary mb-6">
-            Customer Reviews ({product.reviews.length})
+            Customer Reviews ({mappedProduct.reviews.length})
           </h2>
           
           <div className="flex flex-col gap-6">
-            {product.reviews.map((rev) => (
+            {mappedProduct.reviews.map((rev) => (
               <div
                 key={rev.id}
                 className="bg-surface-card rounded-xl border border-outline-variant p-5 shadow-observatory flex flex-col gap-3"
