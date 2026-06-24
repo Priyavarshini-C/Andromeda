@@ -12,7 +12,7 @@ export const ProductQuerySchema = z.object({
   minRating: z.coerce.number().min(1).max(5).optional(),
   inStock: z.coerce.boolean().optional(),
   isFeatured: z.coerce.boolean().optional(),
-  tags: z.string().optional(), // comma-separated
+  tags: z.array(z.string()).optional(),
   sortBy: z
     .enum(["price", "rating", "created_at", "discount_pct"])
     .default("created_at"),

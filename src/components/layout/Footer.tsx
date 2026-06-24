@@ -6,12 +6,12 @@ const CURRENT_YEAR = 2026;
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-outline-variant bg-white py-12">
+    <footer className="w-full border-t border-outline-variant bg-surface-card py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Tagline & Description */}
           <div className="md:col-span-2">
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary dark:from-white to-secondary dark:to-secondary-container bg-clip-text text-transparent">
               ANDROMEDA
             </span>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-on-surface-variant">

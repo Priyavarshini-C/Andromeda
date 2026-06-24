@@ -8,8 +8,6 @@ import { products, categories, sellers, reviews, priceHistory } from "@/lib/db/s
 import { eq, inArray, desc } from "drizzle-orm";
 import { successResponse, serverError, validationError } from "@/lib/api-responses";
 
-export const dynamic = "force-dynamic";
-
 export async function POST(request: NextRequest) {
   try {
     let body;

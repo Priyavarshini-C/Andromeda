@@ -8,8 +8,6 @@ import { products, categories, sellers, reviews, priceHistory } from "@/lib/db/s
 import { eq, desc } from "drizzle-orm";
 import { successResponse, notFound, serverError } from "@/lib/api-responses";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

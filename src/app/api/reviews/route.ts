@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const parsed = ReviewCreateSchema.safeParse(body);
     if (!parsed.success) {
       const details: Record<string, string[]> = {};
-      parsed.error.errors.forEach((err) => {
+      parsed.error.issues.forEach((err) => {
         const field = err.path.join(".");
         if (!details[field]) details[field] = [];
         details[field].push(err.message);

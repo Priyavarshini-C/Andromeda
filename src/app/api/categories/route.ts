@@ -7,8 +7,6 @@ import { categories, products } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 import { successResponse, serverError } from "@/lib/api-responses";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     // Query categories with sub-query for product count

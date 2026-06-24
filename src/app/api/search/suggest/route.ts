@@ -8,8 +8,6 @@ import { products, categories, sellers } from "@/lib/db/schema";
 import { eq, and, like, sql } from "drizzle-orm";
 import { successResponse, serverError, validationError } from "@/lib/api-responses";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

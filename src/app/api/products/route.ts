@@ -9,8 +9,6 @@ import { eq, and, gte, lte, like, or, sql, desc, asc } from "drizzle-orm";
 import { successResponse, serverError, validationError } from "@/lib/api-responses";
 import { ProductQuerySchema } from "@/lib/validations/product";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -33,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (!parsed.success) {
       // Map Zod errors
       const details: Record<string, string[]> = {};
-      parsed.error.errors.forEach((err) => {
+      parsed.error.issues.forEach((err) => {
         const field = err.path.join(".");
         if (!details[field]) details[field] = [];
         details[field].push(err.message);

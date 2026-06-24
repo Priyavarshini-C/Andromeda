@@ -1,10 +1,15 @@
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { Laptop, BookOpen, Home, Shirt, SlidersHorizontal, Star } from "lucide-react";
 import ProductGrid from "@/components/product/ProductGrid";
 import { PRODUCTS, CATEGORIES, getProductsBySearch, getProductsByCategory } from "@/lib/utils/mock-data";
 
-export const unstable_instant = { prefetch: "static" };
+export const unstable_instant = {
+  prefetch: "static",
+  samples: [
+    { searchParams: { q: null, category: null } },
+  ],
+};
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -13,7 +18,25 @@ interface ProductsPageProps {
   }>;
 }
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+export default function ProductsPage({ searchParams }: ProductsPageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full animate-pulse">
+          <div className="h-8 w-48 bg-surface-container rounded mb-8" />
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="w-full lg:w-64 h-96 bg-surface-container rounded-xl" />
+            <div className="flex-1 h-96 bg-surface-container rounded-xl" />
+          </div>
+        </div>
+      }
+    >
+      <ProductsContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ProductsContent({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
   const query = params.q || "";
   const categorySlug = params.category || "";
@@ -42,7 +65,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full">
       
       {/* Header Banner */}
-      <div className="mb-8 border-b border-slate-100 pb-5">
+      <div className="mb-8 border-b border-outline-variant/20 pb-5">
         <h1 className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
           {title}
         </h1>
@@ -57,8 +80,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
           
           {/* Categories Filter Block */}
-          <div className="bg-white rounded-xl border border-outline-variant p-5 shadow-observatory">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-4">
+          <div className="bg-surface-card rounded-xl border border-outline-variant p-5 shadow-observatory">
+            <h3 className="text-xs font-bold text-on-surface-variant/60 tracking-wider uppercase mb-4">
               Categories
             </h3>
             <ul className="space-y-1">
@@ -66,12 +89,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <Link
                   href="/products"
                   className={`flex items-center justify-between p-2 rounded-lg text-xs font-bold transition-all ${
-                    !categorySlug ? "bg-primary text-white" : "text-slate-700 hover:bg-slate-50"
+                    !categorySlug ? "bg-primary text-white" : "text-on-surface-variant hover:bg-surface-container"
                   }`}
                 >
                   <span>All Categories</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                    !categorySlug ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                    !categorySlug ? "bg-white/20 text-white" : "bg-surface-container text-on-surface-variant"
                   }`}>
                     {PRODUCTS.length}
                   </span>
@@ -89,7 +112,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     <Link
                       href={`/products?category=${cat.slug}`}
                       className={`flex items-center justify-between p-2 rounded-lg text-xs font-bold transition-all ${
-                        isSelected ? "bg-primary text-white" : "text-slate-700 hover:bg-slate-50"
+                        isSelected ? "bg-primary text-white" : "text-on-surface-variant hover:bg-surface-container"
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -97,7 +120,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                         {cat.name}
                       </span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        isSelected ? "bg-white/20 text-white" : "bg-surface-container text-on-surface-variant"
                       }`}>
                         {count}
                       </span>
@@ -109,8 +132,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </div>
 
           {/* Quick Mock Filter Block */}
-          <div className="bg-white rounded-xl border border-outline-variant p-5 shadow-observatory">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 tracking-wider uppercase mb-4">
+          <div className="bg-surface-card rounded-xl border border-outline-variant p-5 shadow-observatory">
+            <div className="flex items-center gap-2 text-xs font-bold text-on-surface-variant/60 tracking-wider uppercase mb-4">
               <SlidersHorizontal className="h-4 w-4" />
               Filter By
             </div>
@@ -118,7 +141,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             {/* Price Mock */}
             <div className="mb-4">
               <h4 className="text-xs font-bold text-primary mb-2">Price Range</h4>
-              <div className="h-1 bg-slate-100 rounded relative mb-2">
+              <div className="h-1 bg-surface-container rounded relative mb-2">
                 <div className="absolute left-0 right-0 top-0 bottom-0 bg-secondary rounded" />
               </div>
               <div className="flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
@@ -130,10 +153,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             {/* Rating Mock */}
             <div>
               <h4 className="text-xs font-bold text-primary mb-2">Customer Review</h4>
-              <ul className="space-y-1.5 text-xs text-slate-600 font-medium">
+              <ul className="space-y-1.5 text-xs text-on-surface-variant font-medium">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <li key={i} className="flex items-center gap-2 hover:text-secondary cursor-pointer">
-                    <input type="checkbox" className="rounded text-secondary focus:ring-secondary/20" />
+                    <input type="checkbox" className="rounded text-secondary focus:ring-secondary/20 bg-surface border-outline-variant/50" />
                     <div className="flex items-center gap-0.5 text-tertiary">
                       {Array.from({ length: 5 - i }).map((_, starI) => (
                         <Star key={starI} className="h-3 w-3 fill-current" />

@@ -6,7 +6,12 @@ import { PRODUCTS, getProductBySlug } from "@/lib/utils/mock-data";
 import ProductDetailsClient from "@/components/product/ProductDetailsClient";
 import type { Metadata } from "next";
 
-export const unstable_instant = { prefetch: "static" };
+export const unstable_instant = {
+  prefetch: "static",
+  samples: [
+    { params: { slug: "nebula-x1-pro-smartphone" } },
+  ],
+};
 
 export async function generateStaticParams() {
   return PRODUCTS.map((p) => ({
@@ -34,7 +39,22 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   };
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default function ProductPage({ params }: ProductPageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full animate-pulse flex-1 flex flex-col">
+          <div className="h-4 w-24 bg-surface-container rounded mb-6" />
+          <div className="h-[500px] bg-surface-container rounded-xl" />
+        </div>
+      }
+    >
+      <ProductContent params={params} />
+    </Suspense>
+  );
+}
+
+async function ProductContent({ params }: ProductPageProps) {
   const { slug } = await params;
   const product = getProductBySlug(slug);
 
@@ -48,7 +68,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="mb-6">
         <Link
           href="/products"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant hover:text-secondary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Explore
@@ -59,24 +79,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <ProductDetailsClient product={product} />
 
       {/* Specifications Grid */}
-      <section className="mt-12 border-t border-slate-100 pt-8">
+      <section className="mt-12 border-t border-outline-variant/30 pt-8">
         <h2 className="text-lg font-bold text-primary mb-4">
           Technical Specifications
         </h2>
-        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden shadow-observatory max-w-3xl">
+        <div className="bg-surface-card rounded-xl border border-outline-variant overflow-hidden shadow-observatory max-w-3xl">
           <table className="w-full text-left border-collapse text-xs">
             <tbody>
               {Object.entries(product.specs || {}).map(([key, val], index) => (
                 <tr
                   key={key}
-                  className={`border-b border-slate-100 last:border-b-0 ${
-                    index % 2 === 0 ? "bg-white" : "bg-slate-25"
+                  className={`border-b border-outline-variant/30 last:border-b-0 ${
+                    index % 2 === 0 ? "bg-surface-card" : "bg-surface-container/30"
                   }`}
                 >
-                  <td className="p-4 w-48 font-bold text-slate-500 bg-slate-50/50">
+                  <td className="p-4 w-48 font-bold text-on-surface-variant/80 bg-surface-container/50">
                     {key}
                   </td>
-                  <td className="p-4 font-semibold text-slate-800">
+                  <td className="p-4 font-semibold text-on-surface">
                     {val}
                   </td>
                 </tr>
@@ -87,7 +107,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </section>
 
       {/* Reviews Section */}
-      <section className="mt-12 border-t border-slate-100 pt-8">
+      <section className="mt-12 border-t border-outline-variant/30 pt-8">
         <div className="max-w-3xl">
           <h2 className="text-lg font-bold text-primary mb-6">
             Customer Reviews ({product.reviews.length})
@@ -97,11 +117,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
             {product.reviews.map((rev) => (
               <div
                 key={rev.id}
-                className="bg-white rounded-xl border border-outline-variant p-5 shadow-observatory flex flex-col gap-3"
+                className="bg-surface-card rounded-xl border border-outline-variant p-5 shadow-observatory flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-700">{rev.userName}</span>
+                    <span className="text-xs font-bold text-on-surface">{rev.userName}</span>
                     {rev.isVerified && (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success uppercase tracking-wider">
                         Verified Purchase
@@ -117,13 +137,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     <Star
                       key={i}
                       className={`h-3.5 w-3.5 ${
-                        i < rev.rating ? "fill-current" : "text-slate-200"
+                        i < rev.rating ? "fill-current" : "text-outline-variant"
                       }`}
                     />
                   ))}
                 </div>
 
-                <p className="text-xs leading-relaxed text-slate-600 font-medium">
+                <p className="text-xs leading-relaxed text-on-surface-variant font-medium">
                   {rev.comment}
                 </p>
               </div>
@@ -131,7 +151,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       </section>
-
     </div>
   );
 }

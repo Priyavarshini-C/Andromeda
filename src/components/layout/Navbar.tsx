@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 import { Scale, ShoppingBag, User, LogOut, Heart, LayoutDashboard } from "lucide-react";
 import { useCompareStore } from "@/store/compare.store";
 import SearchBar from "@/components/search/SearchBar";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { logout } from "@/lib/actions/auth";
@@ -83,6 +84,8 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+
           {/* Comparison Page Link */}
           <Link
             href="/compare"
