@@ -10,6 +10,7 @@ import { Scale, ShoppingBag, User, LogOut, Heart, LayoutDashboard } from "lucide
 import { useCompareStore } from "@/store/compare.store";
 import SearchBar from "@/components/search/SearchBar";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import LocationPicker from "@/components/layout/LocationPicker";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { logout } from "@/lib/actions/auth";
@@ -74,7 +75,20 @@ export default function Navbar() {
             >
               Explore Products
             </Link>
+            <Link
+              href="/stores"
+              className={`text-sm font-medium transition-colors hover:text-secondary-container ${
+                pathname.startsWith("/stores") ? "text-secondary-container" : "text-slate-300"
+              }`}
+            >
+              Local Stores
+            </Link>
           </nav>
+        </div>
+
+        {/* Location Picker */}
+        <div className="hidden sm:flex items-center">
+          <LocationPicker />
         </div>
 
         {/* Search Bar Wrapper */}

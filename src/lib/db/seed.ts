@@ -105,6 +105,8 @@ sqlite.exec(`
     rating REAL NOT NULL DEFAULT 0,
     review_count INTEGER NOT NULL DEFAULT 0,
     product_count INTEGER NOT NULL DEFAULT 0,
+    latitude REAL,
+    longitude REAL,
     business_hours TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -264,28 +266,28 @@ console.log("✅ Users seeded");
 // --- Sellers ---
 const sellerIds: Record<string, string> = {};
 const insertSeller = sqlite.prepare(
-  `INSERT OR IGNORE INTO sellers (id, user_id, business_name, slug, status, is_verified, rating, review_count, product_count, country, created_at, updated_at)
-   VALUES (?, ?, ?, ?, 'active', ?, ?, 0, 0, 'IN', ?, ?)`
+  `INSERT OR IGNORE INTO sellers (id, user_id, business_name, slug, description, address_line1, city, state, pincode, status, is_verified, rating, review_count, product_count, country, latitude, longitude, business_hours, phone, email, created_at, updated_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, 0, 0, 'IN', ?, ?, ?, ?, ?, ?, ?)`
 );
 
 const sellerData = [
-  { key: "sell-1", userId: userIds.seller1, name: "AstroMarket", slug: "astromarket", verified: 1, rating: 4.7 },
-  { key: "sell-2", userId: userIds.seller2, name: "Galaxy Retailers", slug: "galaxy-retailers", verified: 1, rating: 4.9 },
-  { key: "sell-3", userId: userIds.seller3, name: "StarShop Electronics", slug: "starshop-electronics", verified: 0, rating: 4.2 },
-  { key: "sell-4", userId: userIds.seller4, name: "Sonic Hub", slug: "sonic-hub", verified: 1, rating: 4.6 },
-  { key: "sell-5", userId: userIds.seller5, name: "Home Planet", slug: "home-planet", verified: 1, rating: 4.5 },
-  { key: "sell-6", userId: userIds.seller6, name: "Kitchen Tech", slug: "kitchen-tech", verified: 0, rating: 4.0 },
-  { key: "sell-7", userId: userIds.seller7, name: "CosmoBooks", slug: "cosmobooks", verified: 1, rating: 4.8 },
-  { key: "sell-8", userId: userIds.seller8, name: "Universal Book Store", slug: "universal-book-store", verified: 0, rating: 4.4 },
-  { key: "sell-9", userId: userIds.seller9, name: "AeroSport Official", slug: "aerosport-official", verified: 1, rating: 4.9 },
-  { key: "sell-10", userId: userIds.seller10, name: "Sprint Hub", slug: "sprint-hub", verified: 0, rating: 4.3 },
+  { key: "sell-1", userId: userIds.seller1, name: "AstroMarket", slug: "astromarket", desc: "Premium electronics & gadgets. Authorized dealer for top brands.", address: "42 MG Road, Brigade Gateway", city: "Bengaluru", state: "Karnataka", pincode: "560001", verified: 1, rating: 4.7, lat: 12.9716, lng: 77.5946, hours: '{"mon-sat": "10:00-21:00", "sun": "11:00-19:00"}', phone: "+91 80 4567 1234", email: "contact@astromarket.in" },
+  { key: "sell-2", userId: userIds.seller2, name: "Galaxy Retailers", slug: "galaxy-retailers", desc: "India's trusted multi-category retailer. Best prices, genuine products.", address: "15 Anna Salai, T. Nagar", city: "Chennai", state: "Tamil Nadu", pincode: "600017", verified: 1, rating: 4.9, lat: 13.0827, lng: 80.2707, hours: '{"mon-sat": "09:30-21:30", "sun": "10:00-20:00"}', phone: "+91 44 2834 5678", email: "hello@galaxyretailers.in" },
+  { key: "sell-3", userId: userIds.seller3, name: "StarShop Electronics", slug: "starshop-electronics", desc: "Your neighbourhood electronics expert. Competitive prices on all gadgets.", address: "78 FC Road, Shivajinagar", city: "Pune", state: "Maharashtra", pincode: "411005", verified: 0, rating: 4.2, lat: 18.5204, lng: 73.8567, hours: '{"mon-sat": "10:00-20:30", "sun": "closed"}', phone: "+91 20 2567 8901", email: "sales@starshop.in" },
+  { key: "sell-4", userId: userIds.seller4, name: "Sonic Hub", slug: "sonic-hub", desc: "Audio specialists — headphones, speakers, and sound systems.", address: "22 Linking Road, Bandra West", city: "Mumbai", state: "Maharashtra", pincode: "400050", verified: 1, rating: 4.6, lat: 19.0596, lng: 72.8295, hours: '{"mon-sat": "11:00-22:00", "sun": "12:00-20:00"}', phone: "+91 22 2645 3456", email: "support@sonichub.in" },
+  { key: "sell-5", userId: userIds.seller5, name: "Home Planet", slug: "home-planet", desc: "Premium home appliances and kitchen solutions for modern living.", address: "5 Park Street, Elgin", city: "Kolkata", state: "West Bengal", pincode: "700016", verified: 1, rating: 4.5, lat: 22.5726, lng: 88.3639, hours: '{"mon-sat": "10:00-20:00", "sun": "11:00-18:00"}', phone: "+91 33 2229 0123", email: "info@homeplanet.in" },
+  { key: "sell-6", userId: userIds.seller6, name: "Kitchen Tech", slug: "kitchen-tech", desc: "Smart kitchen appliances and cookware for the modern chef.", address: "101 Connaught Place, Block A", city: "New Delhi", state: "Delhi", pincode: "110001", verified: 0, rating: 4.0, lat: 28.6139, lng: 77.2090, hours: '{"mon-sat": "10:30-21:00", "sun": "11:00-19:00"}', phone: "+91 11 2341 5678", email: "orders@kitchentech.in" },
+  { key: "sell-7", userId: userIds.seller7, name: "CosmoBooks", slug: "cosmobooks", desc: "Curated book collections — bestsellers, classics, and rare finds.", address: "33 Church Street, Ashok Nagar", city: "Bengaluru", state: "Karnataka", pincode: "560001", verified: 1, rating: 4.8, lat: 12.9750, lng: 77.6040, hours: '{"mon-sat": "09:00-21:00", "sun": "10:00-20:00"}', phone: "+91 80 2558 9012", email: "hello@cosmobooks.in" },
+  { key: "sell-8", userId: userIds.seller8, name: "Universal Book Store", slug: "universal-book-store", desc: "Books for every reader — academic, fiction, non-fiction, and children's.", address: "67 Abids Road, Koti", city: "Hyderabad", state: "Telangana", pincode: "500001", verified: 0, rating: 4.4, lat: 17.3850, lng: 78.4867, hours: '{"mon-sat": "09:30-20:30", "sun": "10:00-18:00"}', phone: "+91 40 2345 6789", email: "read@universalbooks.in" },
+  { key: "sell-9", userId: userIds.seller9, name: "AeroSport Official", slug: "aerosport-official", desc: "Official sportswear and athletic gear. Performance meets style.", address: "12 CG Road, Navrangpura", city: "Ahmedabad", state: "Gujarat", pincode: "380009", verified: 1, rating: 4.9, lat: 23.0225, lng: 72.5714, hours: '{"mon-sat": "10:00-21:00", "sun": "10:00-20:00"}', phone: "+91 79 2656 7890", email: "shop@aerosport.in" },
+  { key: "sell-10", userId: userIds.seller10, name: "Sprint Hub", slug: "sprint-hub", desc: "Fitness gear, sportswear, and outdoor equipment for every adventure.", address: "89 MI Road, C-Scheme", city: "Jaipur", state: "Rajasthan", pincode: "302001", verified: 0, rating: 4.3, lat: 26.9124, lng: 75.7873, hours: '{"mon-sat": "10:00-20:30", "sun": "11:00-19:00"}', phone: "+91 141 237 1234", email: "contact@sprinthub.in" },
 ];
 
 const seedSellers = sqlite.transaction(() => {
   for (const s of sellerData) {
     const id = crypto.randomUUID();
     sellerIds[s.key] = id;
-    insertSeller.run(id, s.userId, s.name, s.slug, s.verified, s.rating, ts, ts);
+    insertSeller.run(id, s.userId, s.name, s.slug, s.desc, s.address, s.city, s.state, s.pincode, s.verified, s.rating, s.lat, s.lng, s.hours, s.phone, s.email, ts, ts);
   }
 });
 seedSellers();

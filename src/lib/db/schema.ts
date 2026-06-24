@@ -167,6 +167,8 @@ export const sellers = sqliteTable("sellers", {
   rating: real("rating").notNull().default(0),
   reviewCount: integer("review_count").notNull().default(0),
   productCount: integer("product_count").notNull().default(0),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   businessHours: text("business_hours"), // JSON string
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
