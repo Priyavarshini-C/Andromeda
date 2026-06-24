@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Star, ShieldCheck } from "lucide-react";
 import ProductDetailsClient from "@/components/product/ProductDetailsClient";
+import ReviewForm from "@/components/product/ReviewForm";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { products, categories, sellers, reviews, priceHistory } from "@/lib/db/schema";
@@ -302,6 +303,15 @@ async function ProductContent({ params }: ProductPageProps) {
                 </p>
               </div>
             ))}
+
+            {mappedProduct.reviews.length === 0 && (
+              <p className="text-sm text-on-surface-variant italic">
+                No reviews yet. Be the first to review this product!
+              </p>
+            )}
+
+            {/* Review Submission Form */}
+            <ReviewForm productId={mappedProduct.id} productSlug={mappedProduct.slug} />
           </div>
         </div>
       </section>

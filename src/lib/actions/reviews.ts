@@ -15,6 +15,7 @@ export async function submitReview(values: {
   rating: number;
   title?: string;
   content: string;
+  images?: string;
 }) {
   const session = await auth();
   if (!session || !session.user || !session.user.id) {
@@ -22,7 +23,7 @@ export async function submitReview(values: {
   }
 
   const userId = session.user.id;
-  const { productId, rating, title, content } = values;
+  const { productId, rating, title, content, images } = values;
 
   try {
     const existing = await db
@@ -41,6 +42,7 @@ export async function submitReview(values: {
       rating,
       title,
       content,
+      images: images || "[]",
       isVerifiedPurchase: true,
     });
 

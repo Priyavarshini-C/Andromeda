@@ -64,7 +64,47 @@ export default function ProductManagerClient({ products, categories }: Props) {
     brand: "",
     specs: "{}",
     status: "active" as "draft" | "active",
+    images: [] as string[],
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNewProduct((prev) => ({
+          ...prev,
+          images: [...prev.images, data.url],
+        }));
+      } else {
+        alert("Upload failed. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong during upload.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setNewProduct((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
 
   const filtered =
     statusFilter === "all"
@@ -84,12 +124,15 @@ export default function ProductManagerClient({ products, categories }: Props) {
         brand: newProduct.brand,
         specs: newProduct.specs,
         status: newProduct.status,
+        images: JSON.stringify(newProduct.images),
+        thumbnailUrl: newProduct.images[0] || undefined,
       });
       if (result.success) {
         setShowAddForm(false);
         setNewProduct({
           title: "", description: "", categoryId: categories[0]?.id || "",
           price: "", originalPrice: "", stock: "", brand: "", specs: "{}", status: "active",
+          images: [],
         });
         router.refresh();
       }
@@ -228,6 +271,41 @@ export default function ProductManagerClient({ products, categories }: Props) {
               onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
               className="w-full rounded-lg border border-outline-variant/50 bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 resize-none"
             />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-on-surface-variant block mb-2">Product Images</label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {newProduct.images.map((img, idx) => (
+                <div key={img} className="relative h-16 w-16 rounded-lg bg-surface border border-outline-variant/30 overflow-hidden shrink-0 group">
+                  <img src={img} alt="Product" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 h-5 w-5 bg-black/75 hover:bg-black text-white rounded-full flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  {idx === 0 && (
+                    <span className="absolute bottom-0 left-0 right-0 bg-secondary/80 text-white text-[8px] font-bold text-center py-0.5 uppercase tracking-wider">
+                      Main
+                    </span>
+                  )}
+                </div>
+              ))}
+              
+              <label className={`h-16 w-16 rounded-lg border-2 border-dashed border-outline-variant/40 hover:border-secondary/50 hover:bg-secondary/5 flex flex-col items-center justify-center text-outline hover:text-secondary cursor-pointer transition-all ${uploadingImage ? "animate-pulse" : ""}`}>
+                <Plus className="h-5 w-5" />
+                <span className="text-[9px] font-bold mt-1">{uploadingImage ? "Uploading" : "Add Image"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                />
+              </label>
+            </div>
+            <p className="text-[10px] text-on-surface-variant">The first uploaded image will be used as the product thumbnail.</p>
           </div>
           <button
             type="submit"

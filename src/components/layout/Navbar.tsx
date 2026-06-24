@@ -73,7 +73,7 @@ export default function Navbar() {
                 pathname.startsWith("/products") ? "text-secondary-container" : "text-slate-300"
               }`}
             >
-              Explore Products
+              Products
             </Link>
             <Link
               href="/stores"
@@ -82,6 +82,14 @@ export default function Navbar() {
               }`}
             >
               Local Stores
+            </Link>
+            <Link
+              href="/seller"
+              className={`text-sm font-medium transition-colors hover:text-secondary-container ${
+                pathname.startsWith("/seller") ? "text-secondary-container" : "text-slate-300"
+              }`}
+            >
+              Sell on Andromeda
             </Link>
           </nav>
         </div>
@@ -147,7 +155,7 @@ export default function Navbar() {
                   </div>
                   <div className="py-1">
                     <Link
-                      href="/products" // For now, direct to products or placeholder profile
+                      href="/profile"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-xs font-semibold hover:bg-surface-container transition-colors"
                     >
@@ -155,12 +163,12 @@ export default function Navbar() {
                       My Profile
                     </Link>
                     <Link
-                      href="/compare"
+                      href="/wishlist"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-xs font-semibold hover:bg-surface-container transition-colors"
                     >
                       <Heart className="h-4 w-4 text-outline" />
-                      Wishlist & Alerts
+                      Wishlist &amp; Alerts
                     </Link>
                     {(user as any).role === "seller" || (user as any).role === "admin" ? (
                       <Link

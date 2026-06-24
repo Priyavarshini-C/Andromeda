@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CompareBar from "@/components/compare/CompareBar";
 import { SessionProvider } from "next-auth/react";
+import { AIAssistantButton } from "@/components/AIAssistantButton";
 
 export const metadata: Metadata = {
   title: "Andromeda — Product Discovery & Comparison Platform",
@@ -37,6 +38,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1 flex flex-col pb-20 sm:pb-24">{children}</main>
           <CompareBar />
+          <AIAssistantButton />
           <Footer />
         </SessionProvider>
       </body>

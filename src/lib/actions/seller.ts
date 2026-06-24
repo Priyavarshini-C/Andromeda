@@ -5,8 +5,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { sellers, products } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { sellers, products, orders, orderItems, alerts, wishlists, notifications, users } from "@/lib/db/schema";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
@@ -90,6 +90,8 @@ export async function addProduct(values: {
   brand: string;
   specs: string; // JSON string
   status: "draft" | "active";
+  images?: string;
+  thumbnailUrl?: string;
 }) {
   const { error, seller } = await requireSeller();
   if (error || !seller) return { error: error || "NOT_FOUND" };
@@ -114,6 +116,8 @@ export async function addProduct(values: {
       brand: values.brand,
       specs: values.specs || "{}",
       status: values.status,
+      images: values.images || "[]",
+      thumbnailUrl: values.thumbnailUrl || null,
     });
 
     // Update seller product count
@@ -195,7 +199,152 @@ export async function updateProductPriceStock(
 }
 
 // ---------------------------------------------------------------------------
+// Edit Product (Full Update + Price-Drop Alert Trigger)
+// ---------------------------------------------------------------------------
+export async function editProduct(
+  productId: string,
+  values: {
+    title?: string;
+    description?: string;
+    categoryId?: string;
+    price?: number;
+    originalPrice?: number;
+    stock?: number;
+    brand?: string;
+    specs?: string;
+    status?: "draft" | "active" | "hidden";
+    images?: string;
+    thumbnailUrl?: string;
+  }
+) {
+  const { error, seller } = await requireSeller();
+  if (error || !seller) return { error: error || "NOT_FOUND" };
+
+  try {
+    // Get current product to detect price drops
+    const currentProducts = await db
+      .select()
+      .from(products)
+      .where(and(eq(products.id, productId), eq(products.sellerId, seller.id)))
+      .limit(1);
+
+    if (currentProducts.length === 0) {
+      return { error: "PRODUCT_NOT_FOUND" };
+    }
+
+    const currentProduct = currentProducts[0];
+    const oldPrice = currentProduct.price;
+    const newPrice = values.price ?? oldPrice;
+
+    // Build update payload
+    const updateData: any = { updatedAt: new Date() };
+    if (values.title !== undefined) updateData.title = values.title;
+    if (values.description !== undefined) updateData.description = values.description;
+    if (values.categoryId !== undefined) updateData.categoryId = values.categoryId;
+    if (values.price !== undefined) updateData.price = values.price;
+    if (values.originalPrice !== undefined) updateData.originalPrice = values.originalPrice;
+    if (values.stock !== undefined) updateData.stock = values.stock;
+    if (values.brand !== undefined) updateData.brand = values.brand;
+    if (values.specs !== undefined) updateData.specs = values.specs;
+    if (values.status !== undefined) updateData.status = values.status;
+    if (values.images !== undefined) updateData.images = values.images;
+    if (values.thumbnailUrl !== undefined) updateData.thumbnailUrl = values.thumbnailUrl;
+
+    await db
+      .update(products)
+      .set(updateData)
+      .where(and(eq(products.id, productId), eq(products.sellerId, seller.id)));
+
+    // -----------------------------------------------------------------------
+    // Price-Drop Alert: notify users who wishlisted this product and have an
+    // active alert with a target price >= new price
+    // -----------------------------------------------------------------------
+    if (values.price !== undefined && newPrice < oldPrice) {
+      try {
+        // Find active price alerts for this product where target price is met
+        const triggeredAlerts = await db
+          .select()
+          .from(alerts)
+          .where(
+            and(
+              eq(alerts.productId, productId),
+              eq(alerts.alertType, "price"),
+              eq(alerts.isActive, true)
+            )
+          );
+
+        const eligibleAlerts = triggeredAlerts.filter(
+          (a) => a.targetPrice === null || newPrice <= (a.targetPrice ?? Infinity)
+        );
+
+        if (eligibleAlerts.length > 0) {
+          // Also find wishlist users for this product (for generic price drop notifications)
+          const wishlistUsers = await db
+            .select({ userId: wishlists.userId })
+            .from(wishlists)
+            .where(eq(wishlists.productId, productId));
+
+          // Unique user IDs from both alerts and wishlists
+          const alertUserIds = eligibleAlerts.map((a) => a.userId);
+          const wishlistUserIds = wishlistUsers.map((w) => w.userId);
+          const allUserIds = [...new Set([...alertUserIds, ...wishlistUserIds])];
+
+          if (allUserIds.length > 0) {
+            const priceDropPercent = Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+            const productTitle = values.title || currentProduct.title;
+
+            // Insert in-app notifications for each user
+            await db.insert(notifications).values(
+              allUserIds.map((userId) => ({
+                userId,
+                title: `🎉 Price Drop Alert!`,
+                message: `"${productTitle}" dropped by ${priceDropPercent}% — now ₹${newPrice.toLocaleString("en-IN")} (was ₹${oldPrice.toLocaleString("en-IN")}).`,
+                type: "price_drop",
+                isRead: false,
+              }))
+            );
+
+            // Update triggered alerts
+            if (eligibleAlerts.length > 0) {
+              await db
+                .update(alerts)
+                .set({
+                  triggerCount: 1, // simplified for MVP
+                  lastTriggeredAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(alerts.productId, productId),
+                    inArray(alerts.userId, alertUserIds)
+                  )
+                );
+            }
+
+            // Console log (simulated notification delivery for MVP)
+            console.log(`\n[Price Drop Alert] ${productTitle}`);
+            console.log(`  Old price: ₹${oldPrice} → New price: ₹${newPrice} (${priceDropPercent}% off)`);
+            console.log(`  Notified ${allUserIds.length} users via in-app notifications.\n`);
+          }
+        }
+      } catch (alertErr) {
+        // Non-fatal: log but don't block the product update response
+        console.error("Price-drop alert error (non-fatal):", alertErr);
+      }
+    }
+
+    revalidatePath("/dashboard/products");
+    revalidatePath("/dashboard");
+    revalidatePath("/products");
+    return { success: true };
+  } catch (err) {
+    console.error("editProduct error:", err);
+    return { error: "SERVER_ERROR" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Delete Product
+
 // ---------------------------------------------------------------------------
 export async function deleteProduct(productId: string) {
   const { error, seller } = await requireSeller();
@@ -226,3 +375,79 @@ export async function deleteProduct(productId: string) {
     return { error: "SERVER_ERROR" };
   }
 }
+
+// ---------------------------------------------------------------------------
+// List Seller Orders
+// ---------------------------------------------------------------------------
+export async function listSellerOrders() {
+  const { error, seller } = await requireSeller();
+  if (error || !seller) return { error: error || "NOT_FOUND", orders: [] };
+
+  try {
+    const sellerOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.sellerId, seller.id))
+      .orderBy(desc(orders.createdAt));
+
+    const populatedOrders = await Promise.all(
+      sellerOrders.map(async (order) => {
+        const items = await db
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, order.id));
+        
+        // Fetch buyer user details (name/email)
+        const buyerResult = await db
+          .select({ name: sql<string>`(SELECT name FROM users WHERE users.id = ${orders.userId})` })
+          .from(orders)
+          .where(eq(orders.id, order.id))
+          .limit(1);
+
+        return {
+          ...order,
+          items,
+          buyerName: buyerResult[0]?.name || "Customer",
+        };
+      })
+    );
+
+    return { success: true, orders: populatedOrders };
+  } catch (err) {
+    console.error("listSellerOrders error:", err);
+    return { error: "SERVER_ERROR", orders: [] };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Update Order Status
+// ---------------------------------------------------------------------------
+export async function updateOrderStatus(
+  orderId: string,
+  values: { status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"; trackingNumber?: string }
+) {
+  const { error, seller } = await requireSeller();
+  if (error || !seller) return { error: error || "NOT_FOUND" };
+
+  try {
+    const updateData: any = {
+      status: values.status,
+      updatedAt: new Date(),
+    };
+    if (values.trackingNumber !== undefined) {
+      updateData.trackingNumber = values.trackingNumber;
+    }
+
+    await db
+      .update(orders)
+      .set(updateData)
+      .where(and(eq(orders.id, orderId), eq(orders.sellerId, seller.id)));
+
+    revalidatePath("/dashboard/orders");
+    return { success: true };
+  } catch (err) {
+    console.error("updateOrderStatus error:", err);
+    return { error: "SERVER_ERROR" };
+  }
+}
+

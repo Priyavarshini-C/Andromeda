@@ -1,47 +1,84 @@
 // =============================================================================
-// Andromeda — Drizzle ORM Schema (SQLite)
-// Mirrors docs/schema.sql with SQLite-compatible types
+// Andromeda — Drizzle ORM Schema (PostgreSQL / Supabase)
 // =============================================================================
 
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  pgTable,
+  text,
+  integer,
+  doublePrecision,
+  timestamp,
+  boolean,
+  uniqueIndex,
+  primaryKey,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
-// Helper: generate UUID default
+// ENUMS (Supabase / Postgres compatibility)
 // ---------------------------------------------------------------------------
-const uuid = () =>
-  text("id")
+export const roleEnum = pgEnum("user_role", ["user", "seller", "admin"]);
+export const alertTypeEnum = pgEnum("alert_type", ["price", "stock"]);
+export const orderStatusEnum = pgEnum("order_status", [
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+]);
+export const sellerStatusEnum = pgEnum("seller_status", [
+  "pending",
+  "active",
+  "suspended",
+  "rejected",
+]);
+export const productStatusEnum = pgEnum("product_status", [
+  "draft",
+  "active",
+  "hidden",
+  "removed",
+]);
+export const currencyEnum = pgEnum("currency_code", ["INR", "USD", "EUR"]);
+
+// Helper: UUID primary key generator
+const pkUuid = (name: string = "id") =>
+  text(name)
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 
 // ---------------------------------------------------------------------------
-// AUTH TABLES (NextAuth.js v5 / Auth.js adapter compatible)
+// AUTH TABLES
 // ---------------------------------------------------------------------------
-
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name"),
   email: text("email").unique(),
-  emailVerified: integer("email_verified", { mode: "timestamp" }),
+  emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   // Andromeda extensions
   passwordHash: text("password_hash"),
-  role: text("role", { enum: ["user", "seller", "admin"] })
-    .notNull()
-    .default("user"),
+  role: roleEnum("role").notNull().default("user"),
   phone: text("phone"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
-export const accounts = sqliteTable(
+export const accounts = pgTable(
   "accounts",
   {
     id: text("id")
@@ -53,19 +90,19 @@ export const accounts = sqliteTable(
     type: text("type").notNull(),
     provider: text("provider").notNull(),
     providerAccountId: text("provider_account_id").notNull(),
-    refreshToken: text("refresh_token"),
-    accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: text("token_type"),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
     scope: text("scope"),
-    idToken: text("id_token"),
-    sessionState: text("session_state"),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+    createdAt: timestamp("created_at", { mode: "date" })
       .notNull()
-      .$defaultFn(() => new Date()),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex("accounts_provider_unique").on(
@@ -75,7 +112,7 @@ export const accounts = sqliteTable(
   ]
 );
 
-export const sessions = sqliteTable("sessions", {
+export const sessions = pgTable("sessions", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -83,21 +120,21 @@ export const sessions = sqliteTable("sessions", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expires: integer("expires", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
-export const verificationTokens = sqliteTable(
+export const verificationTokens = pgTable(
   "verification_tokens",
   {
     identifier: text("identifier").notNull(),
     token: text("token").notNull().unique(),
-    expires: integer("expires", { mode: "timestamp" }).notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
   },
   (table) => [
     uniqueIndex("verification_tokens_pkey").on(table.identifier, table.token),
@@ -107,8 +144,7 @@ export const verificationTokens = sqliteTable(
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: CATEGORIES
 // ---------------------------------------------------------------------------
-
-export const categories = sqliteTable("categories", {
+export const categories = pgTable("categories", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -120,20 +156,19 @@ export const categories = sqliteTable("categories", {
     onDelete: "set null",
   }),
   sortOrder: integer("sort_order").notNull().default(0),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: SELLERS
 // ---------------------------------------------------------------------------
-
-export const sellers = sqliteTable("sellers", {
+export const sellers = pgTable("sellers", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -142,6 +177,7 @@ export const sellers = sqliteTable("sellers", {
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   businessName: text("business_name").notNull(),
+  businessType: text("business_type").notNull().default("direct"), // direct | website
   slug: text("slug").notNull().unique(),
   description: text("description"),
   logoUrl: text("logo_url"),
@@ -155,34 +191,28 @@ export const sellers = sqliteTable("sellers", {
   phone: text("phone"),
   email: text("email"),
   gstin: text("gstin"),
-  status: text("status", {
-    enum: ["pending", "active", "suspended", "rejected"],
-  })
-    .notNull()
-    .default("pending"),
-  isVerified: integer("is_verified", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  verifiedAt: integer("verified_at", { mode: "timestamp" }),
-  rating: real("rating").notNull().default(0),
+  gstUrl: text("gst_url"),
+  status: sellerStatusEnum("status").notNull().default("pending"),
+  isVerified: boolean("is_verified").notNull().default(false),
+  verifiedAt: timestamp("verified_at", { mode: "date" }),
+  rating: doublePrecision("rating").notNull().default(0),
   reviewCount: integer("review_count").notNull().default(0),
   productCount: integer("product_count").notNull().default(0),
-  latitude: real("latitude"),
-  longitude: real("longitude"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   businessHours: text("business_hours"), // JSON string
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: PRODUCTS
 // ---------------------------------------------------------------------------
-
-export const products = sqliteTable("products", {
+export const products = pgTable("products", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -196,41 +226,34 @@ export const products = sqliteTable("products", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   shortDesc: text("short_desc"),
-  images: text("images").notNull().default("[]"), // JSON array of URLs
+  images: text("images").notNull().default("[]"), // JSON string representing image array
   thumbnailUrl: text("thumbnail_url"),
-  price: real("price").notNull(),
-  originalPrice: real("original_price"),
-  currency: text("currency", { enum: ["INR", "USD", "EUR"] })
-    .notNull()
-    .default("INR"),
+  price: doublePrecision("price").notNull(),
+  originalPrice: doublePrecision("original_price"),
+  currency: currencyEnum("currency").notNull().default("INR"),
   stock: integer("stock").notNull().default(0),
   sku: text("sku"),
-  specs: text("specs").notNull().default("{}"), // JSON object
-  tags: text("tags").notNull().default("[]"), // JSON array
+  specs: text("specs").notNull().default("{}"), // JSON specs object
+  tags: text("tags").notNull().default("[]"), // JSON array of tags
   brand: text("brand"),
-  status: text("status", { enum: ["draft", "active", "hidden", "removed"] })
-    .notNull()
-    .default("draft"),
-  isFeatured: integer("is_featured", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  rating: real("rating").notNull().default(0),
+  status: productStatusEnum("status").notNull().default("draft"),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  rating: doublePrecision("rating").notNull().default(0),
   reviewCount: integer("review_count").notNull().default(0),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: REVIEWS
 // ---------------------------------------------------------------------------
-
-export const reviews = sqliteTable("reviews", {
+export const reviews = pgTable("reviews", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -243,23 +266,22 @@ export const reviews = sqliteTable("reviews", {
   rating: integer("rating").notNull(),
   title: text("title"),
   content: text("content").notNull(),
-  isVerifiedPurchase: integer("is_verified_purchase", { mode: "boolean" })
+  images: text("images").notNull().default("[]"),
+  isVerifiedPurchase: boolean("is_verified_purchase")
     .notNull()
     .default(false),
-  isFlagged: integer("is_flagged", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  isFlagged: boolean("is_flagged").notNull().default(false),
   helpfulCount: integer("helpful_count").notNull().default(0),
   unhelpfulCount: integer("unhelpful_count").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
-export const reviewVotes = sqliteTable(
+export const reviewVotes = pgTable(
   "review_votes",
   {
     id: text("id")
@@ -271,10 +293,10 @@ export const reviewVotes = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    isHelpful: integer("is_helpful", { mode: "boolean" }).notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    isHelpful: boolean("is_helpful").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" })
       .notNull()
-      .$defaultFn(() => new Date()),
+      .defaultNow(),
   },
   (table) => [
     uniqueIndex("review_votes_unique").on(table.reviewId, table.userId),
@@ -284,8 +306,7 @@ export const reviewVotes = sqliteTable(
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: PRICE HISTORY
 // ---------------------------------------------------------------------------
-
-export const priceHistory = sqliteTable("price_history", {
+export const priceHistory = pgTable("price_history", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -295,18 +316,17 @@ export const priceHistory = sqliteTable("price_history", {
   sellerId: text("seller_id").references(() => sellers.id, {
     onDelete: "set null",
   }),
-  price: real("price").notNull(),
-  currency: text("currency").notNull().default("INR"),
-  recordedAt: integer("recorded_at", { mode: "timestamp" })
+  price: doublePrecision("price").notNull(),
+  currency: currencyEnum("currency").notNull().default("INR"),
+  recordedAt: timestamp("recorded_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: WISHLISTS
 // ---------------------------------------------------------------------------
-
-export const wishlists = sqliteTable("wishlists", {
+export const wishlists = pgTable("wishlists", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -318,16 +338,15 @@ export const wishlists = sqliteTable("wishlists", {
     .references(() => products.id, { onDelete: "cascade" }),
   collectionName: text("collection_name").notNull().default("My Wishlist"),
   note: text("note"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // CORE DOMAIN: ALERTS
 // ---------------------------------------------------------------------------
-
-export const alerts = sqliteTable("alerts", {
+export const alerts = pgTable("alerts", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -337,12 +356,156 @@ export const alerts = sqliteTable("alerts", {
   productId: text("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
-  alertType: text("alert_type", { enum: ["price", "stock"] }).notNull(),
-  targetPrice: real("target_price"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  alertType: alertTypeEnum("alert_type").notNull(),
+  targetPrice: doublePrecision("target_price"),
+  isActive: boolean("is_active").notNull().default(true),
   triggerCount: integer("trigger_count").notNull().default(0),
-  lastTriggeredAt: integer("last_triggered_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  lastTriggeredAt: timestamp("last_triggered_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// CORE DOMAIN: COMPARISONS
+// ---------------------------------------------------------------------------
+export const comparisons = pgTable("comparisons", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  sessionId: text("session_id").notNull(),
+  userId: text("user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  productIds: text("product_ids").notNull(), // JSON string representing array of product UUIDs
+  createdAt: timestamp("created_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// NEW CORE DOMAIN: SHOPPING CARTS
+// ---------------------------------------------------------------------------
+export const carts = pgTable("carts", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// NEW CORE DOMAIN: ORDERS & ORDER ITEMS
+// ---------------------------------------------------------------------------
+export const orders = pgTable("orders", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+  sellerId: text("seller_id")
+    .notNull()
+    .references(() => sellers.id, { onDelete: "restrict" }),
+  status: orderStatusEnum("status").notNull().default("pending"),
+  paymentStatus: paymentStatusEnum("payment_status")
+    .notNull()
+    .default("pending"),
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  subtotal: doublePrecision("subtotal").notNull(),
+  discountAmount: doublePrecision("discount_amount").notNull().default(0),
+  shippingAmount: doublePrecision("shipping_amount").notNull().default(0),
+  taxAmount: doublePrecision("tax_amount").notNull().default(0),
+  totalAmount: doublePrecision("total_amount").notNull(),
+  currency: currencyEnum("currency").notNull().default("INR"),
+  shippingAddress: text("shipping_address").notNull(), // JSON snapshot string
+  trackingNumber: text("tracking_number"),
+  estimatedDelivery: timestamp("estimated_delivery", { mode: "date" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+export const orderItems = pgTable("order_items", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  orderId: text("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "restrict" }),
+  productTitle: text("product_title").notNull(),
+  productImage: text("product_image"),
+  productSku: text("product_sku"),
+  quantity: integer("quantity").notNull(),
+  unitPrice: doublePrecision("unit_price").notNull(),
+  totalPrice: doublePrecision("total_price").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// NEW CORE DOMAIN: SELLER DAILY ANALYTICS (Aggregated)
+// ---------------------------------------------------------------------------
+export const sellerAnalytics = pgTable(
+  "seller_analytics",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    sellerId: text("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // format YYYY-MM-DD
+    productViews: integer("product_views").notNull().default(0),
+    searchClicks: integer("search_clicks").notNull().default(0),
+    profileViews: integer("profile_views").notNull().default(0),
+    wishlistAdds: integer("wishlist_adds").notNull().default(0),
+    ordersCount: integer("orders_count").notNull().default(0),
+    revenue: doublePrecision("revenue").notNull().default(0),
+    createdAt: timestamp("created_at", { mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("seller_analytics_seller_date").on(table.sellerId, table.date),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// NEW CORE DOMAIN: NOTIFICATIONS
+// ---------------------------------------------------------------------------
+export const notifications = pgTable("notifications", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("general"), // general | price_drop | wishlist | order
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at", { mode: "date" })
+    .notNull()
+    .defaultNow(),
 });

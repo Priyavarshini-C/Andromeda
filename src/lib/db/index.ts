@@ -1,24 +1,26 @@
 // =============================================================================
-// Andromeda — Database Singleton (SQLite + Drizzle ORM)
+// Andromeda — Database Singleton (PostgreSQL + Drizzle ORM)
 // =============================================================================
 
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
-import path from "path";
 
-// Resolve DB file path relative to project root
-const DB_PATH = process.env.DATABASE_URL || path.join(process.cwd(), "andromeda.db");
+const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/andromeda";
 
-// Create the SQLite connection
-const sqlite = new Database(DB_PATH);
+// Global cache for development connection to avoid leaking client connections
+const globalForDb = globalThis as unknown as {
+  conn: postgres.Sql | undefined;
+};
 
-// Enable WAL mode for better concurrent read performance
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+export const conn = globalForDb.conn ?? postgres(connectionString, {
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  // Disable ssl when connecting to localhost, enable for Supabase/production
+  ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1") ? false : { rejectUnauthorized: false },
+});
 
-// Export the Drizzle ORM instance with full schema
-export const db = drizzle(sqlite, { schema });
+if (process.env.NODE_ENV !== "production") globalForDb.conn = conn;
 
-// Export the raw sqlite instance for migrations/raw queries
-export { sqlite };
+export const db = drizzle(conn, { schema });

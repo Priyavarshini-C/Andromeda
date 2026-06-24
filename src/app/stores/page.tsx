@@ -5,6 +5,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   MapPin,
@@ -21,8 +22,23 @@ import {
   ChevronDown,
   ExternalLink,
   Package,
+  Map,
+  List,
 } from "lucide-react";
 import { useLocationStore } from "@/store/location.store";
+
+// Dynamically import map to avoid SSR issues with Leaflet
+const StoresMap = dynamic(() => import("@/components/stores/StoresMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[480px] rounded-xl border border-outline-variant/20 bg-surface-card flex items-center justify-center">
+      <div className="text-center">
+        <div className="h-8 w-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-xs text-on-surface-variant">Loading map…</p>
+      </div>
+    </div>
+  ),
+});
 
 interface StoreItem {
   id: string;
@@ -101,6 +117,7 @@ export default function StoresPage() {
   const [minRating, setMinRating] = useState(0);
   const [radius, setRadius] = useState(5000); // Default 5000km to show all stores
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   const fetchStores = useCallback(async () => {
     setLoading(true);
@@ -231,6 +248,32 @@ export default function StoresPage() {
             <SlidersHorizontal className="h-3.5 w-3.5" />
             Filters
           </button>
+
+          {/* List / Map toggle */}
+          <div className="flex rounded-lg border border-outline-variant/50 overflow-hidden bg-surface-card">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-primary text-white"
+                  : "text-on-surface-variant hover:bg-surface-container"
+              }`}
+            >
+              <List className="h-3.5 w-3.5" />
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === "map"
+                  ? "bg-primary text-white"
+                  : "text-on-surface-variant hover:bg-surface-container"
+              }`}
+            >
+              <Map className="h-3.5 w-3.5" />
+              Map
+            </button>
+          </div>
         </div>
       </div>
 
@@ -285,15 +328,44 @@ export default function StoresPage() {
         </div>
       )}
 
-      {/* Results Count */}
+      {/* Results Count + View */}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-xs text-on-surface-variant font-medium">
           {loading ? "Loading..." : `${stores.length} store${stores.length !== 1 ? "s" : ""} found`}
         </p>
+        {viewMode === "map" && !loading && (
+          <p className="text-[10px] text-on-surface-variant">
+            {stores.filter(s => s.latitude && s.longitude).length} stores with GPS data
+          </p>
+        )}
       </div>
 
+      {/* Map View */}
+      {viewMode === "map" && (
+        <div className="mb-6 h-[480px] rounded-xl border border-outline-variant/20 overflow-hidden">
+          <StoresMap
+            stores={stores
+              .filter(s => s.latitude !== null && s.longitude !== null)
+              .map(s => ({
+                id: s.id,
+                businessName: s.businessName,
+                latitude: s.latitude!,
+                longitude: s.longitude!,
+                rating: s.rating,
+                isVerified: s.isVerified,
+                address: s.address,
+                city: s.city,
+                slug: s.slug,
+              }))
+            }
+            userLat={latitude}
+            userLng={longitude}
+          />
+        </div>
+      )}
+
       {/* Store Cards Grid */}
-      {loading ? (
+      {viewMode === "list" && loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
@@ -312,7 +384,7 @@ export default function StoresPage() {
             </div>
           ))}
         </div>
-      ) : stores.length === 0 ? (
+      ) : viewMode === "list" && stores.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Store className="h-16 w-16 text-outline-variant mb-4" />
           <h3 className="text-lg font-bold text-primary mb-2">No stores found</h3>
@@ -320,7 +392,7 @@ export default function StoresPage() {
             Try adjusting your filters, increasing the search radius, or searching with a different term.
           </p>
         </div>
-      ) : (
+      ) : viewMode === "list" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stores.map((store) => {
             const openStatus = getOpenStatus(store.businessHours);
@@ -420,7 +492,7 @@ export default function StoresPage() {
             );
           })}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

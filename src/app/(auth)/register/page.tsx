@@ -48,6 +48,9 @@ export default function RegisterPage() {
           setSuccess("Account created successfully! Redirecting...");
         }
       } catch (err: any) {
+        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         console.error("Register submission error:", err);
         setError("An unexpected error occurred. Please try again.");
       }
@@ -61,6 +64,9 @@ export default function RegisterPage() {
       try {
         await loginWithGoogle();
       } catch (err: any) {
+        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         console.error("Google sign-in error:", err);
         setError("Could not connect to Google Auth.");
       }

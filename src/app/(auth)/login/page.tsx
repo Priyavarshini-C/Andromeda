@@ -40,6 +40,9 @@ export default function LoginPage() {
           setSuccess("Login successful! Redirecting...");
         }
       } catch (err: any) {
+        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         console.error("Login submission error:", err);
         setError("An unexpected error occurred. Please try again.");
       }
@@ -53,6 +56,9 @@ export default function LoginPage() {
       try {
         await loginWithGoogle();
       } catch (err: any) {
+        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         console.error("Google sign-in error:", err);
         setError("Could not connect to Google Auth.");
       }
@@ -151,9 +157,9 @@ export default function LoginPage() {
           </div>
 
           <div className="text-xs">
-            <a href="#" className="font-semibold text-secondary hover:text-secondary-container">
+            <Link href="/forgot-password" className="font-semibold text-secondary hover:text-secondary-container">
               Forgot password?
-            </a>
+            </Link>
           </div>
         </div>
 

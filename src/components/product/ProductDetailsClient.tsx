@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Star, Scale, Heart, Check, ShieldCheck, Truck, ShoppingCart, Store, Zap, TrendingDown, ExternalLink } from "lucide-react";
+import { Star, Scale, Check, ShieldCheck, Truck, ShoppingCart, Store, Zap, TrendingDown, ExternalLink } from "lucide-react";
 import PriceTag from "@/components/product/PriceTag";
 import StockBadge from "@/components/product/StockBadge";
+import AddToWishlistButton from "@/components/product/AddToWishlistButton";
 import { useCompareStore } from "@/store/compare.store";
 
 export interface CustomSellerListing {
@@ -48,9 +49,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
   const { id, title, brand, description, images, listPrice, rating, reviewCount, sellers, stock } = product;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isSaved, setIsSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
-
   const addCompare = useCompareStore((state) => state.add);
   const removeCompare = useCompareStore((state) => state.remove);
   const isCompared = useCompareStore((state) => state.isSelected(id));
@@ -186,17 +185,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
             )}
           </button>
           
-          <button
-            onClick={() => setIsSaved(!isSaved)}
-            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
-              isSaved
-                ? "text-red-500 border-red-200 bg-red-50"
-                : "text-slate-400 border-outline-variant hover:text-slate-600 hover:bg-slate-50"
-            }`}
-            title="Save to Wishlist"
-          >
-            <Heart className={`h-5 w-5 ${isSaved ? "fill-current" : ""}`} />
-          </button>
+          <AddToWishlistButton productId={id} size="md" />
         </div>
 
         {/* Sellers & Price Comparison Matrix */}

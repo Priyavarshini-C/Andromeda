@@ -15,6 +15,7 @@ import {
   BadgeCheck,
   Store,
   ChevronRight,
+  ShoppingBag,
 } from "lucide-react";
 
 interface DashboardShellProps {
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/dashboard/profile", label: "Store Profile", icon: UserCircle, exact: false },
   { href: "/dashboard/products", label: "Products", icon: Package, exact: false },
   { href: "/dashboard/inventory", label: "Price & Inventory", icon: DollarSign, exact: false },
+  { href: "/dashboard/orders", label: "Orders", icon: ShoppingBag, exact: false },
 ];
 
 export default function DashboardShell({ user, seller, children }: DashboardShellProps) {
