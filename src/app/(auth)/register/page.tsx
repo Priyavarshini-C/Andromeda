@@ -1,5 +1,5 @@
 // =============================================================================
-// Andromeda — Premium Registration Page
+// Andromeda — Premium Registration Page (Rose Gold Overhaul)
 // =============================================================================
 
 "use client";
@@ -9,6 +9,7 @@ import Link from "next/link";
 import { register, loginWithGoogle } from "@/lib/actions/auth";
 import { RegisterSchema } from "@/lib/validations/auth";
 import { Eye, EyeOff, Lock, Mail, User, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -47,8 +48,9 @@ export default function RegisterPage() {
         } else {
           setSuccess("Account created successfully! Redirecting...");
         }
-      } catch (err: any) {
-        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+      } catch (err) {
+        const errorObj = err as { message?: string; digest?: string };
+        if (errorObj?.message === "NEXT_REDIRECT" || errorObj?.digest?.startsWith("NEXT_REDIRECT")) {
           throw err;
         }
         console.error("Register submission error:", err);
@@ -63,8 +65,9 @@ export default function RegisterPage() {
     startTransition(async () => {
       try {
         await loginWithGoogle();
-      } catch (err: any) {
-        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+      } catch (err) {
+        const errorObj = err as { message?: string; digest?: string };
+        if (errorObj?.message === "NEXT_REDIRECT" || errorObj?.digest?.startsWith("NEXT_REDIRECT")) {
           throw err;
         }
         console.error("Google sign-in error:", err);
@@ -74,162 +77,180 @@ export default function RegisterPage() {
   };
 
   return (
-    <>
-      <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-primary tracking-tight">
+    <motion.div
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -10 }}
+      transition={{ duration: 0.3 }}
+      className="flex flex-col text-charcoal"
+    >
+      {/* Dynamic Tab Toggle */}
+      <div className="flex border-b border-[#E8D8CE] mb-8">
+        <Link href="/login" className="flex-1 text-center pb-3 text-xs uppercase tracking-[2px] font-medium text-smoke hover:text-charcoal transition-colors border-b border-transparent">
+          Sign In
+        </Link>
+        <Link href="/register" className="flex-1 text-center pb-3 text-xs uppercase tracking-[2px] font-semibold border-b-2 border-[#8B3A52] text-[#8B3A52]">
+          Register
+        </Link>
+      </div>
+
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-semibold tracking-tight text-charcoal">
           Create Account
         </h2>
-        <p className="mt-2 text-sm text-on-surface-variant">
-          One Search. Infinite Choices. Sign up to get started.
+        <p className="mt-1.5 text-xs text-smoke font-light">
+          Sign up to track price histories and verify local ateliers.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 text-sm text-error bg-error/10 border border-error/20 rounded-lg">
+          <div className="p-3 text-xs text-[#8B3A52] bg-[#F0E0D4] border border-[#8B3A52]/20 rounded">
             {error}
           </div>
         )}
         {success && (
-          <div className="p-3 text-sm text-success bg-success/10 border border-success/20 rounded-lg">
+          <div className="p-3 text-xs text-[#085041] bg-[#E1F5EE] border border-[#1D9E75]/20 rounded">
             {success}
           </div>
         )}
 
         <div className="space-y-3">
           <div>
-            <label htmlFor="name" className="block text-sm font-semibold text-on-surface">
+            <label htmlFor="name" className="block text-xs font-semibold uppercase tracking-wider text-smoke mb-1">
               Full Name
             </label>
-            <div className="mt-1 relative rounded-md shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-outline" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <User className="h-4 w-4 text-smoke" />
               </div>
               <input
                 id="name"
-                name="name"
                 type="text"
-                autoComplete="name"
                 required
                 disabled={isPending}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-outline-variant bg-surface-card rounded-lg focus:outline-hidden focus:ring-2 focus:ring-secondary focus:border-secondary text-sm"
-                placeholder="John Doe"
+                className="block w-full pl-10 pr-3 h-11 border border-[#E8D8CE] bg-[#FAF6F2] rounded text-xs text-charcoal placeholder:text-smoke/50 focus:outline-none focus:ring-2 focus:ring-[#C4607A] focus:border-[#C4607A] transition-all"
+                placeholder="your name"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-on-surface">
+            <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-smoke mb-1">
               Email Address
             </label>
-            <div className="mt-1 relative rounded-md shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-outline" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Mail className="h-4 w-4 text-smoke" />
               </div>
               <input
                 id="email"
-                name="email"
                 type="email"
-                autoComplete="email"
                 required
                 disabled={isPending}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-outline-variant bg-surface-card rounded-lg focus:outline-hidden focus:ring-2 focus:ring-secondary focus:border-secondary text-sm"
-                placeholder="you@example.com"
+                className="block w-full pl-10 pr-3 h-11 border border-[#E8D8CE] bg-[#FAF6F2] rounded text-xs text-charcoal placeholder:text-smoke/50 focus:outline-none focus:ring-2 focus:ring-[#C4607A] focus:border-[#C4607A] transition-all"
+                placeholder="you@domain.com"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-on-surface">
+            <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-smoke mb-1">
               Password
             </label>
-            <div className="mt-1 relative rounded-md shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-outline" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Lock className="h-4 w-4 text-smoke" />
               </div>
               <input
                 id="password"
-                name="password"
                 type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
                 required
                 disabled={isPending}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 border border-outline-variant bg-surface-card rounded-lg focus:outline-hidden focus:ring-2 focus:ring-secondary focus:border-secondary text-sm"
+                className="block w-full pl-10 pr-10 h-11 border border-[#E8D8CE] bg-[#FAF6F2] rounded text-xs text-charcoal placeholder:text-smoke/50 focus:outline-none focus:ring-2 focus:ring-[#C4607A] focus:border-[#C4607A] transition-all"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-outline hover:text-on-surface"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-smoke hover:text-charcoal"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-semibold text-on-surface">
+            <label htmlFor="confirmPassword" className="block text-xs font-semibold uppercase tracking-wider text-smoke mb-1">
               Confirm Password
             </label>
-            <div className="mt-1 relative rounded-md shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-outline" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Lock className="h-4 w-4 text-smoke" />
               </div>
               <input
                 id="confirmPassword"
-                name="confirmPassword"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
+                type="password"
                 required
                 disabled={isPending}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 border border-outline-variant bg-surface-card rounded-lg focus:outline-hidden focus:ring-2 focus:ring-secondary focus:border-secondary text-sm"
-                placeholder="••••••••"
+                className="block w-full pl-10 pr-3 h-11 border border-[#E8D8CE] bg-[#FAF6F2] rounded text-xs text-charcoal placeholder:text-smoke/50 focus:outline-none focus:ring-2 focus:ring-[#C4607A] focus:border-[#C4607A] transition-all"
+                placeholder="confirm password"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-6">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-primary hover:bg-primary-container focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-observatory cursor-pointer disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="animate-spin h-5 w-5 mr-2" />
-            ) : null}
-            Sign Up
-          </button>
+        <div className="flex items-start mt-2">
+          <label className="flex items-center cursor-pointer">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              className="h-4 w-4 text-[#8B3A52] border-[#E8D8CE] focus:ring-[#C4607A] rounded cursor-pointer accent-[#8B3A52]"
+            />
+            <span className="ml-2 text-xs text-smoke font-light leading-relaxed">
+              I accept the <Link href="/terms" className="text-[#C4607A] hover:underline font-medium">Terms and Conditions</Link> of Andromeda.
+            </span>
+          </label>
         </div>
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full flex justify-center items-center h-11 bg-[#8B3A52] hover:bg-[#C4607A] text-[#FAF6F2] text-xs font-semibold uppercase tracking-wider rounded transition-colors cursor-pointer shadow-luxury-light disabled:opacity-50"
+        >
+          {isPending && <Loader2 className="animate-spin h-4 w-4 mr-2" />}
+          Register
+        </button>
       </form>
 
       <div className="mt-6">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-outline-variant" />
+            <div className="w-full border-t border-[#E8D8CE]" />
           </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="px-2 bg-surface-variant text-on-surface-variant">
-              Or sign up with
+          <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold">
+            <span className="px-3 bg-ivory text-smoke">
+              Or Register With
             </span>
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <button
             onClick={handleGoogleSignIn}
             disabled={isPending}
-            className="w-full flex items-center justify-center py-2.5 px-4 border border-outline-variant bg-surface-card rounded-lg text-sm font-semibold text-on-surface hover:bg-surface-container transition duration-150 cursor-pointer disabled:opacity-50"
+            className="w-full flex items-center justify-center h-11 border border-[#E8D8CE] hover:border-[#C07840] bg-[#FAF6F2] hover:bg-white rounded text-xs font-semibold text-charcoal transition-all cursor-pointer disabled:opacity-50"
           >
-            <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" width="24" height="24">
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -247,17 +268,10 @@ export default function RegisterPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Google
+            Google Registration
           </button>
         </div>
       </div>
-
-      <p className="mt-8 text-center text-xs text-on-surface-variant">
-        Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-secondary hover:text-secondary-container">
-          Log in
-        </Link>
-      </p>
-    </>
+    </motion.div>
   );
 }

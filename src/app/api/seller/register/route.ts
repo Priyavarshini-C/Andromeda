@@ -122,10 +122,9 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error("Seller registration error:", err);
 
-    // Handle PostgreSQL unique constraint violation (duplicate email/slug)
-    const pgErr = err as any;
+    const pgErr = err as { code?: string; detail?: string; message?: string };
     if (pgErr?.code === "23505") {
-      const detail: string = pgErr?.detail ?? "";
+      const detail = pgErr?.detail ?? "";
       if (detail.includes("email")) {
         return NextResponse.json(
           { error: "An account with this email already exists. Please sign in." },

@@ -17,7 +17,7 @@ async function requireSeller() {
   const session = await auth();
   if (!session?.user?.id) return { error: "UNAUTHORIZED" as const, seller: null };
 
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "seller" && role !== "admin") return { error: "FORBIDDEN" as const, seller: null };
 
   const result = await db
@@ -178,7 +178,7 @@ export async function updateProductPriceStock(
   if (error || !seller) return { error: error || "NOT_FOUND" };
 
   try {
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof products.$inferInsert> = { updatedAt: new Date() };
     if (values.price !== undefined) updateData.price = values.price;
     if (values.originalPrice !== undefined) updateData.originalPrice = values.originalPrice;
     if (values.stock !== undefined) updateData.stock = values.stock;
@@ -237,7 +237,7 @@ export async function editProduct(
     const newPrice = values.price ?? oldPrice;
 
     // Build update payload
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof products.$inferInsert> = { updatedAt: new Date() };
     if (values.title !== undefined) updateData.title = values.title;
     if (values.description !== undefined) updateData.description = values.description;
     if (values.categoryId !== undefined) updateData.categoryId = values.categoryId;
@@ -274,7 +274,7 @@ export async function editProduct(
           );
 
         const eligibleAlerts = triggeredAlerts.filter(
-          (a) => a.targetPrice === null || newPrice <= (a.targetPrice ?? Infinity)
+          (a: any) => a.targetPrice === null || newPrice <= (a.targetPrice ?? Infinity)
         );
 
         if (eligibleAlerts.length > 0) {
@@ -285,8 +285,8 @@ export async function editProduct(
             .where(eq(wishlists.productId, productId));
 
           // Unique user IDs from both alerts and wishlists
-          const alertUserIds = eligibleAlerts.map((a) => a.userId);
-          const wishlistUserIds = wishlistUsers.map((w) => w.userId);
+          const alertUserIds = eligibleAlerts.map((a: any) => a.userId);
+          const wishlistUserIds = wishlistUsers.map((w: any) => w.userId);
           const allUserIds = [...new Set([...alertUserIds, ...wishlistUserIds])];
 
           if (allUserIds.length > 0) {
@@ -295,7 +295,7 @@ export async function editProduct(
 
             // Insert in-app notifications for each user
             await db.insert(notifications).values(
-              allUserIds.map((userId) => ({
+              allUserIds.map((userId: any) => ({
                 userId,
                 title: `🎉 Price Drop Alert!`,
                 message: `"${productTitle}" dropped by ${priceDropPercent}% — now ₹${newPrice.toLocaleString("en-IN")} (was ₹${oldPrice.toLocaleString("en-IN")}).`,
@@ -391,7 +391,7 @@ export async function listSellerOrders() {
       .orderBy(desc(orders.createdAt));
 
     const populatedOrders = await Promise.all(
-      sellerOrders.map(async (order) => {
+      sellerOrders.map(async (order: any) => {
         const items = await db
           .select()
           .from(orderItems)
@@ -430,7 +430,7 @@ export async function updateOrderStatus(
   if (error || !seller) return { error: error || "NOT_FOUND" };
 
   try {
-    const updateData: any = {
+    const updateData: Partial<typeof orders.$inferInsert> = {
       status: values.status,
       updatedAt: new Date(),
     };

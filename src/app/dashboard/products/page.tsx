@@ -2,6 +2,7 @@
 // Andromeda — Seller Product Manager Page (Server Component)
 // =============================================================================
 
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sellers, products, categories } from "@/lib/db/schema";
@@ -9,7 +10,24 @@ import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import ProductManagerClient from "@/components/dashboard/ProductManagerClient";
 
-export default async function ProductsPage() {
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-surface">
+          <div className="animate-pulse space-y-4 text-center">
+            <div className="h-8 w-48 bg-surface-container rounded mx-auto" />
+            <div className="text-xs text-on-surface-variant animate-bounce">Loading products manager...</div>
+          </div>
+        </div>
+      }
+    >
+      <ProductsPageContent />
+    </Suspense>
+  );
+}
+
+async function ProductsPageContent() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -45,7 +63,7 @@ export default async function ProductsPage() {
 
   return (
     <ProductManagerClient
-      products={sellerProducts.map(({ product, category }) => ({
+      products={sellerProducts.map(({ product, category }: any) => ({
         id: product.id,
         title: product.title,
         slug: product.slug,
@@ -60,7 +78,7 @@ export default async function ProductsPage() {
         categoryId: category.id,
         createdAt: product.createdAt?.toISOString() || "",
       }))}
-      categories={allCategories.map((c) => ({
+      categories={allCategories.map((c: any) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,

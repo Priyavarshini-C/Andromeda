@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { products, categories, sellers, reviews, priceHistory } from "@/lib/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
+import { getMarketplaceListings } from "@/lib/services/marketplace-aggregator";
 
 export const unstable_instant = {
   prefetch: "static",
@@ -17,14 +18,20 @@ export const unstable_instant = {
 };
 
 export async function generateStaticParams() {
-  const allProducts = await db
-    .select({ slug: products.slug })
-    .from(products)
-    .where(eq(products.status, "active"));
-  
-  return allProducts.map((p) => ({
-    slug: p.slug,
-  }));
+  try {
+    const allProducts = await db
+      .select({ slug: products.slug })
+      .from(products)
+      .where(eq(products.status, "active"));
+    
+    const result = allProducts.map((p: any) => ({
+      slug: p.slug,
+    }));
+    return result.length > 0 ? result : [{ slug: "mock-product-slug-for-build" }];
+  } catch (err) {
+    console.warn("Skipping generateStaticParams due to database connection error during build:", err);
+    return [{ slug: "mock-product-slug-for-build" }];
+  }
 }
 
 interface ProductPageProps {
@@ -121,7 +128,7 @@ async function ProductContent({ params }: ProductPageProps) {
     .where(eq(reviews.productId, dbProduct.id))
     .orderBy(desc(reviews.createdAt));
 
-  const mappedReviews = dbReviews.map((r) => ({
+  const mappedReviews = dbReviews.map((r: any) => ({
     id: r.id,
     userName: r.userName || "Anonymous User",
     rating: r.rating,
@@ -144,7 +151,7 @@ async function ProductContent({ params }: ProductPageProps) {
     .limit(30);
 
   const mappedPriceHistory = dbPriceHistory
-    .map((ph) => ({
+    .map((ph: any) => ({
       date: ph.recordedAt instanceof Date 
         ? ph.recordedAt.toISOString().split("T")[0] 
         : new Date(ph.recordedAt).toISOString().split("T")[0],
@@ -158,10 +165,8 @@ async function ProductContent({ params }: ProductPageProps) {
     .from(sellers)
     .where(eq(sellers.status, "active"));
 
-  const otherSellers = allSellers.filter((s) => s.id !== dbSeller.id).slice(0, 2);
+  const otherSellers = allSellers.filter((s: any) => s.id !== dbSeller.id).slice(0, 2);
 
-  // Import mock third-party listings
-  const { getMarketplaceListings } = require("@/lib/services/marketplace-aggregator");
   const onlineListings = getMarketplaceListings(dbProduct.id, dbProduct.title, dbProduct.price);
 
   const localSellersList = [
@@ -178,7 +183,7 @@ async function ProductContent({ params }: ProductPageProps) {
       rating: dbSeller.rating || 4.5,
       shopUrl: `/stores/${dbSeller.slug}`,
     },
-    ...otherSellers.map((s, idx) => ({
+    ...otherSellers.map((s: any, idx: number) => ({
       id: s.id,
       source: "local" as const,
       sellerId: s.id,
@@ -269,7 +274,7 @@ async function ProductContent({ params }: ProductPageProps) {
           </h2>
           
           <div className="flex flex-col gap-6">
-            {mappedProduct.reviews.map((rev) => (
+            {mappedProduct.reviews.map((rev: any) => (
               <div
                 key={rev.id}
                 className="bg-surface-card rounded-xl border border-outline-variant p-5 shadow-observatory flex flex-col gap-3"

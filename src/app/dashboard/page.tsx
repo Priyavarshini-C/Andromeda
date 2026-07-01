@@ -92,7 +92,7 @@ async function DashboardContent() {
         totalReviews: Number(reviewStats.total) || 0,
         avgRating: Math.round((Number(reviewStats.avgRating) || 0) * 10) / 10,
       }}
-      recentProducts={recentProducts.map((p) => ({
+      recentProducts={recentProducts.map((p: any) => ({
         id: p.id,
         title: p.title,
         slug: p.slug,

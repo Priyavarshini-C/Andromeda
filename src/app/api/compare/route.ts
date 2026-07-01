@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return successResponse({ products: [], spec_keys: [] });
     }
 
-    const actualProductIds = dbProducts.map((p) => p.product.id);
+    const actualProductIds = dbProducts.map((p: any) => p.product.id);
 
     // Fetch all active sellers to mock comparisons dynamically
     const allSellers = await db
@@ -73,16 +73,16 @@ export async function POST(request: NextRequest) {
     const reviewsMap: Record<string, typeof dbReviews> = {};
     const priceHistoryMap: Record<string, typeof dbPriceHistory> = {};
 
-    actualProductIds.forEach((id) => {
+    actualProductIds.forEach((id: any) => {
       reviewsMap[id] = [];
       priceHistoryMap[id] = [];
     });
 
-    dbReviews.forEach((r) => {
+    dbReviews.forEach((r: any) => {
       reviewsMap[r.productId]?.push(r);
     });
 
-    dbPriceHistory.forEach((ph) => {
+    dbPriceHistory.forEach((ph: any) => {
       // Keep only up to 30 history points per product
       if (priceHistoryMap[ph.productId].length < 30) {
         priceHistoryMap[ph.productId].push(ph);
@@ -94,10 +94,10 @@ export async function POST(request: NextRequest) {
     let maxRating = -1;
     let bestValueScore = -1;
 
-    const computedStats = dbProducts.map(({ product }) => {
+    const computedStats = dbProducts.map(({ product }: any) => {
       const pReviews = reviewsMap[product.id] || [];
       const totalReviews = pReviews.length;
-      const reviewSum = pReviews.reduce((sum, r) => sum + r.rating, 0);
+      const reviewSum = pReviews.reduce((sum: number, r: any) => sum + r.rating, 0);
       const rating = totalReviews > 0 ? Number((reviewSum / totalReviews).toFixed(2)) : 0;
       
       const price = product.price;
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
     const specKeysSet = new Set<string>();
 
     // Build the list of CompareProducts
-    const productsList = dbProducts.map(({ product, category, seller }) => {
-      const stats = computedStats.find((s) => s.id === product.id)!;
+    const productsList = dbProducts.map(({ product, category, seller }: any) => {
+      const stats = computedStats.find((s: any) => s.id === product.id)!;
       const pReviews = reviewsMap[product.id] || [];
       
       // Breakdown calculation
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         "4": 0,
         "5": 0,
       };
-      pReviews.forEach((r) => {
+      pReviews.forEach((r: any) => {
         const ratingStr = r.rating.toString() as "1" | "2" | "3" | "4" | "5";
         if (breakdown[ratingStr] !== undefined) {
           breakdown[ratingStr]++;
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
       // Price history formatting
       const historyPoints = (priceHistoryMap[product.id] || [])
-        .map((ph) => ({
+        .map((ph: any) => ({
           price: ph.price,
           currency: ph.currency,
           recorded_at: ph.recordedAt instanceof Date 
@@ -217,9 +217,9 @@ export async function POST(request: NextRequest) {
             shopUrl: "#",
           },
           ...allSellers
-            .filter((s) => s.id !== seller.id)
+            .filter((s: any) => s.id !== seller.id)
             .slice(0, 2)
-            .map((s, idx) => ({
+            .map((s: any, idx: number) => ({
               sellerId: s.id,
               sellerName: s.businessName,
               isVerified: s.isVerified,

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       .where(eq(carts.userId, userId))
       .orderBy(carts.createdAt);
 
-    const items = dbCartItems.map(({ cart, product, category, seller }) => {
+    const items = dbCartItems.map(({ cart, product, category, seller }: any) => {
       const discountPct =
         product.originalPrice && product.originalPrice > product.price
           ? Math.round(

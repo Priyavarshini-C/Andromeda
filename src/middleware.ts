@@ -33,7 +33,7 @@ export default auth((req) => {
 
   // 2. Role-Based Access Control (RBAC) checks
   if (isLoggedIn) {
-    const role = (req.auth?.user as any)?.role || "user";
+    const role = req.auth?.user?.role || "user";
 
     // Admin routes protection
     const isAdminRoute =

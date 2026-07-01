@@ -22,7 +22,7 @@ interface AdminStats {
   newUsersLast30Days: number;
 }
 
-interface Seller {
+export interface Seller {
   id: string;
   businessName: string;
   slug: string;
@@ -36,7 +36,7 @@ interface Seller {
   createdAt: Date;
 }
 
-interface Order {
+export interface Order {
   id: string;
   status: string;
   paymentStatus: string;
@@ -48,7 +48,7 @@ interface Order {
   sellerName?: string | null;
 }
 
-interface User {
+export interface User {
   id: string;
   name?: string | null;
   email?: string | null;
@@ -199,8 +199,8 @@ export function AdminDashboardClient({ stats, sellers, recentOrders, recentUsers
     if (!broadcastTitle || !broadcastMessage) return;
     startTransition(async () => {
       const result = await broadcastNotification(broadcastTitle, broadcastMessage);
-      if ("success" in result && result.success) {
-        setBroadcastStatus(`✅ Sent to ${(result as any).sentTo} users!`);
+      if ("success" in result && result.success && "sentTo" in result) {
+        setBroadcastStatus(`✅ Sent to ${result.sentTo} users!`);
         setBroadcastTitle("");
         setBroadcastMessage("");
       } else {

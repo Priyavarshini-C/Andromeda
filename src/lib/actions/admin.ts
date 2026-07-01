@@ -16,7 +16,7 @@ import { revalidatePath } from "next/cache";
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) return { error: "UNAUTHORIZED" as const };
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "admin") return { error: "FORBIDDEN" as const };
   return { error: null, userId: session.user.id };
 }
@@ -144,7 +144,7 @@ export async function listSellers(
     const offset = (page - 1) * limit;
     const whereClause =
       statusFilter !== "all"
-        ? eq(sellers.status, statusFilter as any)
+        ? eq(sellers.status, statusFilter as "pending" | "active" | "suspended" | "rejected")
         : undefined;
 
     const [sellersData, [{ total }]] = await Promise.all([
@@ -404,7 +404,7 @@ export async function broadcastNotification(title: string, message: string) {
 
     if (allUsers.length === 0) return { error: "NO_USERS" };
 
-    const notifRows = allUsers.map((u) => ({
+    const notifRows = allUsers.map((u: any) => ({
       userId: u.id,
       title,
       message,

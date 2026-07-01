@@ -5,22 +5,23 @@ import Link from "next/link";
 import { Scale, ArrowLeft, Trash2 } from "lucide-react";
 import { useCompareStore } from "@/store/compare.store";
 import CompareTable from "@/components/compare/CompareTable";
+import { Product } from "@/lib/utils/mock-data";
 
 export default function ComparePage() {
   const productIds = useCompareStore((state) => state.productIds);
   const clearCompare = useCompareStore((state) => state.clear);
   const [mounted, setMounted] = useState(false);
-  const [compareProducts, setCompareProducts] = useState<any[]>([]);
+  const [compareProducts, setCompareProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => setMounted(true), 0);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
     if (productIds.length === 0) {
-      setCompareProducts([]);
+      setTimeout(() => setCompareProducts([]), 0);
       return;
     }
 

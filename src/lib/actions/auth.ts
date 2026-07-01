@@ -12,7 +12,7 @@ import { RegisterSchema, LoginSchema } from "@/lib/validations/auth";
 import { signIn, signOut } from "@/lib/auth";
 import { AuthError } from "next-auth";
 
-export async function register(values: any) {
+export async function register(values: unknown) {
   const validatedFields = RegisterSchema.safeParse(values);
   if (!validatedFields.success) {
     return { error: "Invalid fields!" };
@@ -36,9 +36,10 @@ export async function register(values: any) {
       passwordHash,
       role: "user",
     });
-  } catch (dbErr: any) {
+  } catch (dbErr) {
     console.error("Database registration error:", dbErr);
-    const code = dbErr?.cause?.code ?? dbErr?.code ?? "";
+    const err = dbErr as { cause?: { code?: string }; code?: string };
+    const code = err?.cause?.code ?? err?.code ?? "";
     if (code === "ECONNREFUSED" || code === "ENOTFOUND") {
       return { error: "Cannot connect to the database. Please check your DATABASE_URL in .env.local and ensure Supabase is reachable." };
     }
@@ -68,7 +69,7 @@ export async function register(values: any) {
   }
 }
 
-export async function login(values: any) {
+export async function login(values: unknown) {
   const validatedFields = LoginSchema.safeParse(values);
   if (!validatedFields.success) {
     return { error: "Invalid fields!" };
@@ -83,7 +84,7 @@ export async function login(values: any) {
       redirectTo: "/",
     });
     return { success: "Logged in!" };
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
@@ -93,7 +94,8 @@ export async function login(values: any) {
       }
     }
     // Handle DB connection errors surfaced through signIn
-    const code = error?.cause?.code ?? error?.code ?? "";
+    const err = error as { cause?: { code?: string }; code?: string };
+    const code = err?.cause?.code ?? err?.code ?? "";
     if (code === "ECONNREFUSED" || code === "ENOTFOUND") {
       return { error: "Cannot connect to the database. Please check your setup." };
     }
@@ -135,10 +137,11 @@ export async function loginWithGoogle() {
         redirectTo: "/",
       });
       return { success: "Logged in via mock Google account!" };
-    } catch (err: any) {
+    } catch (err) {
       console.error("Mock Google auth error:", err);
+      const errorObj = err as { message?: string; digest?: string };
       // Rethrow redirect if NextAuth redirects
-      if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+      if (errorObj?.message === "NEXT_REDIRECT" || errorObj?.digest?.startsWith("NEXT_REDIRECT")) {
         throw err;
       }
       return { error: "Google Mock Sign-In failed." };

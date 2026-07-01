@@ -10,6 +10,44 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { submitReview } from "@/lib/actions/reviews";
 
+interface StarRatingInputProps {
+  rating: number;
+  hovered: number;
+  setRating: (rating: number) => void;
+  setHovered: (hovered: number) => void;
+}
+
+function StarRatingInput({ rating, hovered, setRating, setHovered }: StarRatingInputProps) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => setRating(star)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
+          className="cursor-pointer transition-transform hover:scale-110 active:scale-95"
+          aria-label={`Rate ${star} stars`}
+        >
+          <Star
+            className={`h-7 w-7 transition-colors ${
+              star <= (hovered || rating)
+                ? "fill-amber-400 text-amber-400"
+                : "text-slate-300 dark:text-slate-600"
+            }`}
+          />
+        </button>
+      ))}
+      {rating > 0 && (
+        <span className="ml-2 text-sm font-bold text-amber-500">
+          {["", "Poor", "Fair", "Good", "Very Good", "Excellent"][rating]}
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface ReviewFormProps {
   productId: string;
   productSlug: string;
@@ -102,34 +140,7 @@ export default function ReviewForm({ productId, productSlug }: ReviewFormProps) 
     }
   };
 
-  const StarRatingInput = () => (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => setRating(star)}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(0)}
-          className="cursor-pointer transition-transform hover:scale-110 active:scale-95"
-          aria-label={`Rate ${star} stars`}
-        >
-          <Star
-            className={`h-7 w-7 transition-colors ${
-              star <= (hovered || rating)
-                ? "fill-amber-400 text-amber-400"
-                : "text-slate-300 dark:text-slate-600"
-            }`}
-          />
-        </button>
-      ))}
-      {rating > 0 && (
-        <span className="ml-2 text-sm font-bold text-amber-500">
-          {["", "Poor", "Fair", "Good", "Very Good", "Excellent"][rating]}
-        </span>
-      )}
-    </div>
-  );
+
 
   // If not logged in
   if (isGuest) {
@@ -203,7 +214,7 @@ export default function ReviewForm({ productId, productSlug }: ReviewFormProps) 
             <label className="block text-xs font-bold text-on-surface-variant mb-2">
               Your Rating <span className="text-error">*</span>
             </label>
-            <StarRatingInput />
+            <StarRatingInput rating={rating} hovered={hovered} setRating={setRating} setHovered={setHovered} />
           </div>
 
           {/* Review Title (optional) */}

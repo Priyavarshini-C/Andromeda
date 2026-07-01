@@ -16,6 +16,31 @@ import Link from "next/link";
 
 type Theme = "system" | "light" | "dark";
 
+const ToggleRow = ({
+  label, desc, checked, onChange
+}: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between py-3 border-b border-outline-variant/30 last:border-0">
+    <div>
+      <p className="text-sm font-semibold text-on-surface">{label}</p>
+      <p className="text-xs text-on-surface-variant mt-0.5">{desc}</p>
+    </div>
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+        checked ? "bg-secondary" : "bg-surface-container"
+      }`}
+      role="switch"
+      aria-checked={checked}
+    >
+      <span
+        className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  </div>
+);
+
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -47,7 +72,9 @@ export default function SettingsPage() {
     if (status === "unauthenticated") router.replace("/login");
     // Load saved theme from localStorage
     const stored = localStorage.getItem("andromeda-theme") as Theme | null;
-    if (stored) setTheme(stored);
+    if (stored) {
+      setTimeout(() => setTheme(stored), 0);
+    }
   }, [status, router]);
 
   const handleThemeChange = (t: Theme) => {
@@ -117,30 +144,7 @@ export default function SettingsPage() {
     { value: "system", label: "System", Icon: Monitor },
   ];
 
-  const ToggleRow = ({
-    label, desc, checked, onChange
-  }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) => (
-    <div className="flex items-center justify-between py-3 border-b border-outline-variant/30 last:border-0">
-      <div>
-        <p className="text-sm font-semibold text-on-surface">{label}</p>
-        <p className="text-xs text-on-surface-variant mt-0.5">{desc}</p>
-      </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-          checked ? "bg-secondary" : "bg-surface-container"
-        }`}
-        role="switch"
-        aria-checked={checked}
-      >
-        <span
-          className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-    </div>
-  );
+
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8 w-full flex-1">

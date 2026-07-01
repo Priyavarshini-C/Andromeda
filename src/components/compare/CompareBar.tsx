@@ -14,7 +14,7 @@ export default function CompareBar() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => setMounted(true), 0);
   }, []);
 
   if (!mounted || productIds.length === 0) return null;

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     // Prioritize categories, then brands, then sellers, then products
-    dbCategories.forEach((c) => {
+    dbCategories.forEach((c: any) => {
       suggestions.push({
         type: "category",
         label: c.name,
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    dbBrands.forEach((b) => {
+    dbBrands.forEach((b: any) => {
       if (b.brand) {
         suggestions.push({
           type: "brand",
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    dbSellers.forEach((s) => {
+    dbSellers.forEach((s: any) => {
       suggestions.push({
         type: "seller",
         label: s.businessName,
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    dbProducts.forEach((p) => {
+    dbProducts.forEach((p: any) => {
       suggestions.push({
         type: "product",
         label: p.title,

@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // Format hits
-    const hits = dbProducts.map(({ product, category, seller }) => {
+    const hits = dbProducts.map(({ product, category, seller }: any) => {
       const discountPct = product.originalPrice && product.originalPrice > product.price
         ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
         : 0;
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
       .where(whereClause)
       .groupBy(categories.id);
 
-    const categoriesFacet = categoryCounts.map((c) => ({
+    const categoriesFacet = categoryCounts.map((c: any) => ({
       value: c.slug,
       label: c.name,
       count: Number(c.count),
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
       .where(and(whereClause, sql`${products.brand} IS NOT NULL`))
       .groupBy(products.brand);
 
-    const brandsFacet = brandCounts.map((b) => ({
+    const brandsFacet = brandCounts.map((b: any) => ({
       value: b.brand || "",
       label: b.brand || "",
       count: Number(b.count),
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
       .where(whereClause)
       .groupBy(sellers.id);
 
-    const sellersFacet = sellerCounts.map((s) => ({
+    const sellersFacet = sellerCounts.map((s: any) => ({
       value: s.id,
       label: s.name,
       count: Number(s.count),
@@ -207,30 +207,30 @@ export async function GET(request: NextRequest) {
               label: "Under ₹10,000",
               min: 0,
               max: 10000,
-              count: hits.filter((h) => h.price < 10000).length,
+              count: hits.filter((h: any) => h.price < 10000).length,
             },
             {
               label: "₹10,000 - ₹25,000",
               min: 10000,
               max: 25000,
-              count: hits.filter((h) => h.price >= 10000 && h.price <= 25000).length,
+              count: hits.filter((h: any) => h.price >= 10000 && h.price <= 25000).length,
             },
             {
               label: "₹25,000 - ₹50,000",
               min: 25000,
               max: 50000,
-              count: hits.filter((h) => h.price >= 25000 && h.price <= 50000).length,
+              count: hits.filter((h: any) => h.price >= 25000 && h.price <= 50000).length,
             },
             {
               label: "Above ₹50,000",
               min: 50000,
               max: 9999999,
-              count: hits.filter((h) => h.price > 50000).length,
+              count: hits.filter((h: any) => h.price > 50000).length,
             },
           ],
           ratings: [
-            { value: "4", label: "4★ & above", count: hits.filter((h) => h.rating >= 4).length },
-            { value: "3", label: "3★ & above", count: hits.filter((h) => h.rating >= 3).length },
+            { value: "4", label: "4★ & above", count: hits.filter((h: any) => h.rating >= 4).length },
+            { value: "3", label: "3★ & above", count: hits.filter((h: any) => h.rating >= 3).length },
           ],
         },
         query: q,

@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Mail, Phone, MapPin, MessageSquare, Send, Clock, CheckCircle2 } from "lucide-react";
 
 const CONTACT_CHANNELS = [
@@ -240,12 +241,12 @@ export default function ContactPage() {
                 Join thousands of businesses already reaching more customers on Andromeda. Our seller
                 support team is dedicated to helping you grow.
               </p>
-              <a
+              <Link
                 href="/seller"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-white text-primary px-4 py-2 text-xs font-bold hover:bg-white/90 transition-colors"
               >
                 Join as a Seller
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -47,7 +47,7 @@ async function DashboardLayoutContent({
     redirect("/login");
   }
 
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "seller" && role !== "admin") {
     redirect("/");
   }

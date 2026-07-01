@@ -5,6 +5,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import type { Map as LeafletMap, LayerGroup } from "leaflet";
 
 interface StoreMarker {
   id: string;
@@ -27,16 +28,18 @@ interface StoresMapProps {
 
 export default function StoresMap({ stores, userLat, userLng, onStoreClick }: StoresMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersLayerRef = useRef<LayerGroup | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Initialize Map container once on mount
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current || mapInstanceRef.current) return;
 
     // Dynamically import Leaflet (avoids SSR issues)
     import("leaflet").then((L) => {
       // Fix default icon paths for Next.js
-      (L.Icon.Default as any).mergeOptions({
+      (L.Icon.Default as unknown as { mergeOptions: (options: Record<string, string>) => void }).mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
@@ -70,6 +73,39 @@ export default function StoresMap({ stores, userLat, userLng, onStoreClick }: St
         maxZoom: 19,
       }).addTo(map);
 
+      // Create a markers layer group and add to map
+      const markersLayer = L.layerGroup().addTo(map);
+      markersLayerRef.current = markersLayer;
+
+      mapInstanceRef.current = map;
+      setIsLoaded(true);
+    });
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markersLayerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update map view when user location changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !userLat || !userLng) return;
+    mapInstanceRef.current.setView([userLat, userLng], 13, { animate: true });
+  }, [userLat, userLng]);
+
+  // Update markers when stores, user location, or callbacks change
+  useEffect(() => {
+    if (!isLoaded || !mapInstanceRef.current || !markersLayerRef.current) return;
+    const markersLayer = markersLayerRef.current;
+
+    import("leaflet").then((L) => {
+      // Clear old markers
+      markersLayer.clearLayers();
+
       // User location marker (blue dot)
       if (userLat && userLng) {
         const userIcon = L.divIcon({
@@ -87,7 +123,7 @@ export default function StoresMap({ stores, userLat, userLng, onStoreClick }: St
 
         L.marker([userLat, userLng], { icon: userIcon })
           .bindPopup("<b>📍 Your Location</b>")
-          .addTo(map);
+          .addTo(markersLayer);
       }
 
       // Store markers
@@ -134,30 +170,14 @@ export default function StoresMap({ stores, userLat, userLng, onStoreClick }: St
 
         const marker = L.marker([store.latitude, store.longitude], { icon: storeIcon })
           .bindPopup(popup)
-          .addTo(map);
+          .addTo(markersLayer);
 
         marker.on("click", () => {
           if (onStoreClick) onStoreClick(store.id);
         });
       });
-
-      mapInstanceRef.current = map;
-      setIsLoaded(true);
     });
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
-
-  // Update map view when user location changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !userLat || !userLng) return;
-    mapInstanceRef.current.setView([userLat, userLng], 13, { animate: true });
-  }, [userLat, userLng]);
+  }, [stores, userLat, userLng, onStoreClick, isLoaded]);
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden">

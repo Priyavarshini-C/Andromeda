@@ -359,11 +359,11 @@ async function main() {
 
 main()
   .then(async () => {
-    await conn.end();
+    await conn?.end();
     process.exit(0);
   })
   .catch(async (e) => {
     console.error("❌ Seeding failed:", e);
-    await conn.end();
+    await conn?.end();
     process.exit(1);
   });

@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   primaryKey,
   pgEnum,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -152,7 +153,7 @@ export const categories = pgTable("categories", {
   slug: text("slug").notNull().unique(),
   icon: text("icon"),
   description: text("description"),
-  parentId: text("parent_id").references((): any => categories.id, {
+  parentId: text("parent_id").references((): AnyPgColumn => categories.id, {
     onDelete: "set null",
   }),
   sortOrder: integer("sort_order").notNull().default(0),

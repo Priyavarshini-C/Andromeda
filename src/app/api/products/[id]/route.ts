@@ -67,7 +67,7 @@ export async function GET(
       .where(eq(reviews.productId, product.id));
 
     const totalReviews = dbReviews.length;
-    const reviewSum = dbReviews.reduce((sum, r) => sum + r.rating, 0);
+    const reviewSum = dbReviews.reduce((sum: number, r: any) => sum + r.rating, 0);
     const averageRating = totalReviews > 0 ? Number((reviewSum / totalReviews).toFixed(2)) : 0;
 
     const breakdown: Record<"1" | "2" | "3" | "4" | "5", number> = {
@@ -77,7 +77,7 @@ export async function GET(
       "4": 0,
       "5": 0,
     };
-    dbReviews.forEach((r) => {
+    dbReviews.forEach((r: any) => {
       const ratingStr = r.rating.toString() as "1" | "2" | "3" | "4" | "5";
       if (breakdown[ratingStr] !== undefined) {
         breakdown[ratingStr]++;
@@ -97,7 +97,7 @@ export async function GET(
       .limit(30);
 
     const priceHistoryPoints = dbPriceHistory
-      .map((ph) => ({
+      .map((ph: any) => ({
         price: ph.price,
         currency: ph.currency,
         recorded_at: ph.recordedAt instanceof Date 

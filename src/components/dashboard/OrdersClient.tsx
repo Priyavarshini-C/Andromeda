@@ -38,7 +38,7 @@ interface Order {
   id: string;
   userId: string;
   sellerId: string;
-  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod: string | null;
   paymentReference: string | null;
@@ -79,8 +79,15 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
     status: Order["status"],
     trackingNumber?: string
   ) => {
+    if (status === "refunded") {
+      alert("Refunded orders cannot be updated manually.");
+      return;
+    }
     startTransition(async () => {
-      const res = await updateOrderStatus(orderId, { status, trackingNumber });
+      const res = await updateOrderStatus(orderId, { 
+        status: status as "pending" | "confirmed" | "shipped" | "delivered" | "cancelled", 
+        trackingNumber 
+      });
       if (res.success) {
         router.refresh();
       } else {

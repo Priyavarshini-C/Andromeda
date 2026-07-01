@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { WishlistItem } from "@/lib/types";
 
 interface Props {
   productId: string;
@@ -30,8 +31,8 @@ export default function AddToWishlistButton({ productId, className = "", size = 
         const res = await fetch("/api/user/wishlist");
         if (res.ok) {
           const data = await res.json();
-          const items: any[] = data.data || [];
-          setIsWishlisted(items.some((i: any) => i.product?.id === productId));
+          const items = (data.data || []) as WishlistItem[];
+          setIsWishlisted(items.some((i) => i.product?.id === productId));
         }
       } catch { /* silent */ }
     };
@@ -57,8 +58,8 @@ export default function AddToWishlistButton({ productId, className = "", size = 
         const res = await fetch("/api/user/wishlist");
         if (res.ok) {
           const data = await res.json();
-          const items: any[] = data.data || [];
-          const match = items.find((i: any) => i.product?.id === productId);
+          const items = (data.data || []) as WishlistItem[];
+          const match = items.find((i) => i.product?.id === productId);
           if (match) {
             await fetch(`/api/user/wishlist/${match.id}`, { method: "DELETE" });
             setIsWishlisted(false);

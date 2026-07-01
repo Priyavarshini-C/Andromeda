@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(notifications.createdAt))
       .limit(50);
 
-    const unreadCount = userNotifications.filter((n) => !n.isRead).length;
+    const unreadCount = userNotifications.filter((n: any) => !n.isRead).length;
 
     return NextResponse.json({ notifications: userNotifications, unreadCount });
   } catch (err) {

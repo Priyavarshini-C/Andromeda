@@ -1,6 +1,5 @@
 // =============================================================================
-// Andromeda — Seller Registration Page (Multi-Step)
-// Supports: Type A (Direct Seller) and Type B (Website Seller)
+// Andromeda — Premium Seller Registration Multi-Step Wizard (Rose Gold Overhaul)
 // =============================================================================
 
 "use client";
@@ -10,19 +9,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Package, Globe, ChevronRight, ChevronLeft, CheckCircle2,
   Store, ArrowRight, Building, Phone, Mail, MapPin, User,
-  Lock, Eye, EyeOff, FileText
+  Lock, Eye, EyeOff, FileText, Sparkles, Rocket
 } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ---- Types ----
 type SellerType = "direct" | "website" | null;
 type Step = 1 | 2 | 3 | 4;
 
 interface FormData {
-  // Step 1: Type selection
   sellerType: SellerType;
-
-  // Step 2: Business details
   businessName: string;
   ownerName: string;
   businessPhone: string;
@@ -34,11 +30,7 @@ interface FormData {
   gstin: string;
   logoUrl: string;
   gstUrl: string;
-
-  // Step 2b: Website URL (Type B only)
   websiteUrl: string;
-
-  // Step 3: Account setup
   accountName: string;
   accountEmail: string;
   password: string;
@@ -53,7 +45,7 @@ const INITIAL_FORM: FormData = {
   businessEmail: "",
   addressLine1: "",
   city: "",
-  state: "",
+  state: "Karnataka",
   pincode: "",
   gstin: "",
   logoUrl: "",
@@ -70,36 +62,44 @@ const INDIAN_STATES = [
   "Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh",
   "Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab",
   "Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand",
-  "West Bengal","Delhi","Jammu & Kashmir","Ladakh","Chandigarh","Puducherry",
+  "West Bengal","Delhi","Jammu & Kashmir","Ladakh","Chandigarh","Puducherry"
 ];
 
-// ---- Steps UI ----
 function StepIndicator({ current, total }: { current: Step; total: number }) {
-  const labels = ["Business Type", "Business Info", "Account Setup", "Verified!"];
+  const labels = ["Atelier Type", "Atelier Info", "Account Credentials", "Launched!"];
   return (
-    <div className="flex items-center justify-center gap-0 mb-8">
-      {labels.slice(0, total).map((label, i) => {
+    <div className="flex items-center justify-between w-full max-w-xl mx-auto mb-10">
+      {labels.map((label, i) => {
         const stepNum = (i + 1) as Step;
         const isCompleted = current > stepNum;
         const isCurrent = current === stepNum;
+        
         return (
-          <div key={label} className="flex items-center">
-            <div className="flex flex-col items-center gap-1">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                isCompleted ? "bg-success text-white" :
-                isCurrent ? "bg-primary text-white" :
-                "bg-surface-container text-on-surface-variant"
-              }`}>
-                {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : stepNum}
+          <div key={label} className="flex-1 flex flex-col items-center relative">
+            <div className="flex flex-col items-center z-10">
+              <div 
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                  isCompleted ? "bg-[#1D9E75] text-white" :
+                  isCurrent ? "bg-[#8B3A52] text-white shadow-luxury-light" :
+                  "bg-white border border-[#E8D8CE] text-smoke"
+                }`}
+              >
+                {isCompleted ? <CheckCircle2 className="h-4.5 w-4.5" /> : stepNum}
               </div>
-              <span className={`text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap ${
-                isCurrent ? "text-primary" : "text-on-surface-variant"
-              }`}>{label}</span>
+              <span className={`text-[9px] font-semibold uppercase tracking-wider mt-2 whitespace-nowrap ${
+                isCurrent ? "text-[#8B3A52]" : "text-smoke"
+              }`}>
+                {label}
+              </span>
             </div>
+
+            {/* Connecting lines */}
             {i < total - 1 && (
-              <div className={`h-0.5 w-12 sm:w-16 mx-1 mb-5 transition-colors ${
-                current > stepNum ? "bg-success" : "bg-surface-container"
-              }`} />
+              <div 
+                className={`absolute top-4 left-1/2 right-[-50%] h-0.5 -z-0 transition-colors duration-300 ${
+                  current > stepNum ? "bg-[#1D9E75]" : "bg-[#E8D8CE]"
+                }`}
+              />
             )}
           </div>
         );
@@ -108,498 +108,362 @@ function StepIndicator({ current, total }: { current: Step; total: number }) {
   );
 }
 
-// ---- Inner form component (needs useSearchParams) ----
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const typeFromUrl = searchParams.get("type");
 
-  const [step, setStep] = useState<Step>(typeFromUrl ? 2 : 1);
+  // Get initial seller type from URL query parameter
+  const typeParam = searchParams.get("type") as SellerType;
+  const initialType = (typeParam === "direct" || typeParam === "website") ? typeParam : null;
+
+  const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({
     ...INITIAL_FORM,
-    sellerType: typeFromUrl === "website" ? "website" : typeFromUrl === "direct" ? "direct" : null,
+    sellerType: initialType,
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Logo / GST upload mock triggers
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingGst, setUploadingGst] = useState(false);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "logoUrl" | "gstUrl") => {
+  const update = <K extends keyof FormData>(key: K, val: FormData[K]) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "logoUrl" | "gstUrl") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (field === "logoUrl") setUploadingLogo(true);
     else setUploadingGst(true);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setForm((prev) => ({ ...prev, [field]: data.url }));
+    // Mock direct upload path
+    setTimeout(() => {
+      if (field === "logoUrl") {
+        update("logoUrl", "https://images.unsplash.com/photo-1516876437184-593fda40c7cd?q=80&w=150&auto=format&fit=crop");
+        setUploadingLogo(false);
       } else {
-        alert("Upload failed. Please try again.");
+        update("gstUrl", "https://example.com/mock-doc.pdf");
+        setUploadingGst(false);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong during upload.");
-    } finally {
-      if (field === "logoUrl") setUploadingLogo(false);
-      else setUploadingGst(false);
-    }
-  };
-
-  const update = (field: keyof FormData, value: string) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-  const handleTypeSelect = (type: SellerType) => {
-    update("sellerType", type as string);
-    setStep(2);
+    }, 1000);
   };
 
   const handleNext = () => {
     setError(null);
-    // Basic validation
+
+    if (step === 1 && !form.sellerType) {
+      setError("Please select your business structure structure model.");
+      return;
+    }
+
     if (step === 2) {
-      if (!form.businessName || !form.ownerName || !form.businessPhone || !form.city || !form.state) {
-        setError("Please fill in all required fields.");
+      if (!form.businessName || !form.ownerName || !form.businessPhone || !form.businessEmail || !form.addressLine1 || !form.city || !form.pincode) {
+        setError("Please populate all mandatory operational metrics.");
         return;
       }
       if (form.sellerType === "website" && !form.websiteUrl) {
-        setError("Please provide your website URL.");
+        setError("Please enter your online storefront URL.");
         return;
       }
     }
-    if (step === 3) {
-      if (!form.accountEmail || !form.password || !form.accountName) {
-        setError("Please fill in all required fields.");
-        return;
-      }
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
-      if (form.password.length < 8) {
-        setError("Password must be at least 8 characters.");
-        return;
-      }
-    }
+
     setStep((prev) => (prev + 1) as Step);
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
     setError(null);
+    if (!form.accountName || !form.accountEmail || !form.password || !form.confirmPassword) {
+      setError("Credentials fields cannot be left empty.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Confirmed password must match original entry.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/seller/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sellerType: form.sellerType,
-          businessName: form.businessName,
-          ownerName: form.ownerName,
-          businessPhone: form.businessPhone,
-          businessEmail: form.businessEmail,
-          addressLine1: form.addressLine1,
-          city: form.city,
-          state: form.state,
-          pincode: form.pincode,
-          gstin: form.gstin,
-          websiteUrl: form.websiteUrl,
-          accountName: form.accountName,
-          accountEmail: form.accountEmail,
-          password: form.password,
-          logoUrl: form.logoUrl,
-          gstUrl: form.gstUrl,
-        }),
+        body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        // Guard: data.error could be an object if the API returns structured errors
-        const errMsg =
-          typeof data.error === "string"
-            ? data.error
-            : typeof data.error?.message === "string"
-            ? data.error.message
-            : "Registration failed. Please try again.";
-        setError(errMsg);
-        return;
+
+      if (res.ok) {
+        setStep(4);
+      } else {
+        const data = await res.json();
+        setError(data.error?.message || "Onboarding failed. Try again.");
       }
-      setStep(4);
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      console.error(err);
+      setError("Could not complete seller setup.");
     } finally {
       setLoading(false);
     }
   };
 
-  const inputCls = "w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary transition-all";
-  const labelCls = "block text-xs font-bold text-on-surface-variant mb-1.5";
-  const requiredStar = <span className="text-error ml-0.5">*</span>;
+  // Reusable styling tokens
+  const labelCls = "block text-[10px] font-semibold uppercase tracking-wider text-smoke mb-1.5";
+  const inputCls = "block w-full px-3 h-10 border border-[#E8D8CE] bg-[#FAF6F2] rounded text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-[#C4607A] focus:border-[#C4607A] transition-all";
 
   return (
-    <div className="mx-auto max-w-2xl w-full px-4 py-12 sm:px-6">
-      {/* Logo */}
-      <div className="text-center mb-8">
-        <Link href="/" className="inline-flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            ANDROMEDA
-          </span>
-        </Link>
-        <p className="text-xs text-on-surface-variant mt-1">Seller Registration</p>
-      </div>
-
+    <div className="w-full max-w-3xl bg-ivory rounded-xl border border-[#E8D8CE] p-8 sm:p-10 shadow-luxury-light text-charcoal">
+      
+      {/* Step Progress indicators */}
       <StepIndicator current={step} total={4} />
 
-      {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg bg-error/10 border border-error/20 px-4 py-3 text-sm text-error font-medium">
+        <div className="mb-6 p-3 text-xs text-[#8B3A52] bg-[#F0E0D4] border border-[#8B3A52]/20 rounded">
           {error}
         </div>
       )}
 
-      {/* ─── Step 1: Choose Seller Type ─── */}
+      {/* ─── Step 1: Business Type Selection ─── */}
       {step === 1 && (
-        <div>
-          <h1 className="text-xl font-bold text-primary text-center mb-2">How do you want to sell?</h1>
-          <p className="text-sm text-on-surface-variant text-center mb-8">Choose the model that fits your business.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-charcoal">Select Business Type</h2>
+            <p className="text-xs text-smoke font-light mt-1.5">Configure your integration type with Andromeda</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+            {/* Direct Seller */}
             <button
-              onClick={() => handleTypeSelect("direct")}
-              className="flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-outline-variant bg-surface-card hover:border-primary hover:shadow-observatory-lifted transition-all cursor-pointer text-left group"
+              type="button"
+              onClick={() => update("sellerType", "direct")}
+              className={`p-6 rounded border text-left transition-all duration-300 ${
+                form.sellerType === "direct"
+                  ? "border-2 border-[#8B3A52] bg-[#FDF0EB] shadow-luxury-light"
+                  : "border-[#E8D8CE] hover:border-[#C07840] bg-[#FAF6F2]"
+              }`}
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                <Package className="h-7 w-7" />
+              <div className="h-10 w-10 rounded bg-white flex items-center justify-center border border-[#E8D8CE] mb-4">
+                <Store className="h-5 w-5 text-[#8B3A52]" />
               </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Type A</p>
-                <h3 className="text-base font-bold text-primary mb-2">Sell Directly</h3>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  No website needed. List products directly on Andromeda with photos, pricing, and stock levels.
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-white px-4 py-2 text-xs font-bold">
-                Choose Direct <ArrowRight className="h-3.5 w-3.5" />
-              </span>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-charcoal">Type A — Direct Seller</h3>
+              <p className="text-[10px] text-smoke mt-2 font-light leading-relaxed">
+                List products directly on Andromeda. Handle incoming customer inquiries, inventory, and order dispatch natively. No website required.
+              </p>
             </button>
 
+            {/* Redirect Seller */}
             <button
-              onClick={() => handleTypeSelect("website")}
-              className="flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-secondary/30 bg-gradient-to-br from-secondary/5 to-surface-card hover:border-secondary hover:shadow-observatory-lifted transition-all cursor-pointer text-left group"
+              type="button"
+              onClick={() => update("sellerType", "website")}
+              className={`p-6 rounded border text-left transition-all duration-300 ${
+                form.sellerType === "website"
+                  ? "border-2 border-[#8B3A52] bg-[#FDF0EB] shadow-luxury-light"
+                  : "border-[#E8D8CE] hover:border-[#C07840] bg-[#FAF6F2]"
+              }`}
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-white transition-colors">
-                <Globe className="h-7 w-7" />
+              <div className="h-10 w-10 rounded bg-white flex items-center justify-center border border-[#E8D8CE] mb-4">
+                <Globe className="h-5 w-5 text-[#8B3A52]" />
               </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Type B — Popular</p>
-                <h3 className="text-base font-bold text-primary mb-2">Link Your Website</h3>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Have your own e-commerce site? Showcase products on Andromeda and drive traffic to your store.
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary text-white px-4 py-2 text-xs font-bold">
-                Choose Website <ArrowRight className="h-3.5 w-3.5" />
-              </span>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-charcoal">Type B — Redirect Seller</h3>
+              <p className="text-[10px] text-smoke mt-2 font-light leading-relaxed">
+                Link products from your existing domain storefront. Shoppers find you on Andromeda and transfer to your platform to checkout.
+              </p>
             </button>
           </div>
-          <p className="text-center text-xs text-on-surface-variant mt-6">
-            Already registered?{" "}
-            <Link href="/login" className="text-secondary font-semibold hover:underline">Sign in</Link>
-          </p>
         </div>
       )}
 
-      {/* ─── Step 2: Business Information ─── */}
+      {/* ─── Step 2: Business details ─── */}
       {step === 2 && (
-        <div>
-          <div className="flex items-center gap-2 mb-6">
-            {form.sellerType === "website" ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
-                <Globe className="h-5 w-5" />
-              </div>
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Package className="h-5 w-5" />
-              </div>
-            )}
-            <div>
-              <h2 className="text-lg font-bold text-primary">Business Information</h2>
-              <p className="text-xs text-on-surface-variant">Tell us about your business</p>
-            </div>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 border-b border-[#E8D8CE] pb-3 mb-2">
+            <Building className="h-4.5 w-4.5 text-rose" />
+            <h2 className="text-xs font-semibold uppercase tracking-[2px] text-charcoal">Atelier Credentials</h2>
           </div>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Business Name {requiredStar}</label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                  <input type="text" placeholder="Your Business Name" value={form.businessName}
-                    onChange={(e) => update("businessName", e.target.value)}
-                    className={`${inputCls} pl-9`} />
-                </div>
+                <label className={labelCls}>Registered Business Name *</label>
+                <input type="text" placeholder="Atelier name" value={form.businessName}
+                  onChange={(e) => update("businessName", e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Owner / Contact Name {requiredStar}</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                  <input type="text" placeholder="Full Name" value={form.ownerName}
-                    onChange={(e) => update("ownerName", e.target.value)}
-                    className={`${inputCls} pl-9`} />
-                </div>
+                <label className={labelCls}>Owner / Legal Representative *</label>
+                <input type="text" placeholder="Full name" value={form.ownerName}
+                  onChange={(e) => update("ownerName", e.target.value)} className={inputCls} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Business Phone {requiredStar}</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                  <input type="tel" placeholder="+91 98765 43210" value={form.businessPhone}
-                    onChange={(e) => update("businessPhone", e.target.value)}
-                    className={`${inputCls} pl-9`} />
-                </div>
+                <label className={labelCls}>Business Phone *</label>
+                <input type="tel" placeholder="10-digit number" value={form.businessPhone}
+                  onChange={(e) => update("businessPhone", e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Business Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                  <input type="email" placeholder="business@example.com" value={form.businessEmail}
-                    onChange={(e) => update("businessEmail", e.target.value)}
-                    className={`${inputCls} pl-9`} />
-                </div>
+                <label className={labelCls}>Business Email *</label>
+                <input type="email" placeholder="contact@atelier.com" value={form.businessEmail}
+                  onChange={(e) => update("businessEmail", e.target.value)} className={inputCls} />
               </div>
             </div>
 
             <div>
-              <label className={labelCls}>Address</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-outline" />
-                <input type="text" placeholder="Street address, landmark" value={form.addressLine1}
-                  onChange={(e) => update("addressLine1", e.target.value)}
-                  className={`${inputCls} pl-9`} />
-              </div>
+              <label className={labelCls}>Physical Address *</label>
+              <input type="text" placeholder="Unit, building, street address" value={form.addressLine1}
+                onChange={(e) => update("addressLine1", e.target.value)} className={inputCls} />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className={labelCls}>City {requiredStar}</label>
-                <input type="text" placeholder="City" value={form.city}
+                <label className={labelCls}>City *</label>
+                <input type="text" placeholder="Bengaluru" value={form.city}
                   onChange={(e) => update("city", e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>State {requiredStar}</label>
-                <select value={form.state} onChange={(e) => update("state", e.target.value)}
-                  className={inputCls}>
-                  <option value="">Select State</option>
+                <label className={labelCls}>State *</label>
+                <select value={form.state} onChange={(e) => update("state", e.target.value)} className={inputCls}>
                   {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Pincode</label>
-                <input type="text" placeholder="560001" value={form.pincode}
+                <label className={labelCls}>Pincode *</label>
+                <input type="text" placeholder="6 digits" value={form.pincode}
                   onChange={(e) => update("pincode", e.target.value)} className={inputCls} />
               </div>
             </div>
 
-            <div>
-              <label className={labelCls}>GSTIN (optional)</label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                <input type="text" placeholder="22AAAAA0000A1Z5" value={form.gstin}
-                  onChange={(e) => update("gstin", e.target.value)}
-                  className={`${inputCls} pl-9 uppercase`} />
-              </div>
-              <p className="text-[11px] text-on-surface-variant mt-1">Adding GSTIN speeds up seller verification.</p>
-            </div>
-
-            {/* Business Logo & GST Document Upload */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Logo and documents uploads */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
               <div>
-                <label className={labelCls}>Business Logo</label>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center text-outline overflow-hidden shrink-0">
+                <label className={labelCls}>Atelier Logo</label>
+                <div className="flex items-center gap-3 bg-[#FAF6F2] border border-dashed border-[#E8D8CE] hover:border-[#C4607A] rounded p-3 transition-colors">
+                  <div className="h-10 w-10 rounded bg-white border border-[#E8D8CE] flex items-center justify-center overflow-hidden shrink-0">
                     {form.logoUrl ? (
-                      <img src={form.logoUrl} alt="Logo" className="h-full w-full object-cover" />
+                      <img src={form.logoUrl} alt="Logo" className="h-full w-full object-contain" />
                     ) : (
-                      <Store className="h-6 w-6" />
+                      <Store className="h-5 w-5 text-smoke" />
                     )}
                   </div>
-                  <label className="flex-1 cursor-pointer">
-                    <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs font-bold text-on-surface hover:bg-surface-container transition-colors w-full">
-                      {uploadingLogo ? "Uploading..." : form.logoUrl ? "Change Logo" : "Upload Logo"}
+                  <label className="flex-grow cursor-pointer text-center">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8B3A52]">
+                      {uploadingLogo ? "Uploading..." : form.logoUrl ? "Replace File" : "Choose File"}
                     </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload(e, "logoUrl")}
-                      disabled={uploadingLogo}
-                    />
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, "logoUrl")} />
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className={labelCls}>GST / Business Document</label>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center text-outline overflow-hidden shrink-0">
+                <label className={labelCls}>Business GST certificate</label>
+                <div className="flex items-center gap-3 bg-[#FAF6F2] border border-dashed border-[#E8D8CE] hover:border-[#C4607A] rounded p-3 transition-colors">
+                  <div className="h-10 w-10 rounded bg-white border border-[#E8D8CE] flex items-center justify-center overflow-hidden shrink-0">
                     {form.gstUrl ? (
-                      <CheckCircle2 className="h-6 w-6 text-success" />
+                      <CheckCircle2 className="h-5 w-5 text-[#1D9E75]" />
                     ) : (
-                      <FileText className="h-6 w-6" />
+                      <FileText className="h-5 w-5 text-smoke" />
                     )}
                   </div>
-                  <label className="flex-1 cursor-pointer">
-                    <span className="inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs font-bold text-on-surface hover:bg-surface-container transition-colors w-full">
-                      {uploadingGst ? "Uploading..." : form.gstUrl ? "Change Doc" : "Upload Document"}
+                  <label className="flex-grow cursor-pointer text-center">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8B3A52]">
+                      {uploadingGst ? "Uploading..." : form.gstUrl ? "Replace Doc" : "Choose PDF"}
                     </span>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload(e, "gstUrl")}
-                      disabled={uploadingGst}
-                    />
+                    <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => handleFileUpload(e, "gstUrl")} />
                   </label>
                 </div>
               </div>
             </div>
 
-            {/* Type B: Website URL */}
+            {/* Type B: URL input */}
             {form.sellerType === "website" && (
-              <div className="rounded-xl border border-secondary/20 bg-secondary/5 p-4">
-                <label className={`${labelCls} text-secondary`}>Your Website URL {requiredStar}</label>
+              <div className="rounded border border-[#8B3A52]/20 bg-[#FDF0EB] p-4 mt-3">
+                <label className={`${labelCls} text-[#8B3A52]`}>Direct Storefront Website URL *</label>
                 <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary" />
-                  <input type="url" placeholder="https://yourshop.com" value={form.websiteUrl}
+                  <Globe className="absolute left-3 top-3.5 h-4 w-4 text-[#8B3A52]" />
+                  <input type="url" placeholder="https://yourdomain.com" value={form.websiteUrl}
                     onChange={(e) => update("websiteUrl", e.target.value)}
-                    className={`${inputCls} pl-9 border-secondary/30 focus:border-secondary`} />
+                    className={`${inputCls} pl-9 border-[#8B3A52]/30 focus:border-[#8B3A52]`} />
                 </div>
-                <p className="text-[11px] text-on-surface-variant mt-1">
-                  Customers will be redirected here when they click &quot;Buy Now&quot; on your products.
-                </p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* ─── Step 3: Account Setup ─── */}
+      {/* ─── Step 3: Account credentials ─── */}
       {step === 3 && (
-        <div>
-          <div className="flex items-center gap-2 mb-6">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-tertiary/10 text-tertiary">
-              <Lock className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-primary">Create Your Account</h2>
-              <p className="text-xs text-on-surface-variant">These credentials are for your Andromeda seller account</p>
-            </div>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 border-b border-[#E8D8CE] pb-3 mb-2">
+            <Lock className="h-4.5 w-4.5 text-rose" />
+            <h2 className="text-xs font-semibold uppercase tracking-[2px] text-charcoal">Account Credentials</h2>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className={labelCls}>Your Full Name {requiredStar}</label>
+              <label className={labelCls}>Administrator Full Name *</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                <input type="text" placeholder="Your name" value={form.accountName}
-                  onChange={(e) => update("accountName", e.target.value)}
-                  className={`${inputCls} pl-9`} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Email Address {requiredStar}</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                <input type="email" placeholder="you@example.com" value={form.accountEmail}
-                  onChange={(e) => update("accountEmail", e.target.value)}
-                  className={`${inputCls} pl-9`} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Password {requiredStar}</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                <input type={showPassword ? "text" : "password"} placeholder="Min 8 characters" value={form.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  className={`${inputCls} pl-9 pr-10`} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Confirm Password {requiredStar}</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
-                <input type={showConfirm ? "text" : "password"} placeholder="Repeat your password" value={form.confirmPassword}
-                  onChange={(e) => update("confirmPassword", e.target.value)}
-                  className={`${inputCls} pl-9 pr-10`} />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer">
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                <User className="absolute left-3 top-3 h-4 w-4 text-smoke" />
+                <input type="text" placeholder="User name" value={form.accountName}
+                  onChange={(e) => update("accountName", e.target.value)} className={`${inputCls} pl-9`} />
               </div>
             </div>
 
-            <div className="rounded-lg bg-surface-container/50 border border-outline-variant p-4 space-y-1 text-xs text-on-surface-variant">
-              <p className="font-semibold text-primary mb-2">Review your details:</p>
-              <p><strong>Business:</strong> {form.businessName}</p>
-              <p><strong>Type:</strong> {form.sellerType === "website" ? "Type B — Website Seller" : "Type A — Direct Seller"}</p>
-              {form.sellerType === "website" && <p><strong>Website:</strong> {form.websiteUrl}</p>}
-              <p><strong>Location:</strong> {form.city}, {form.state}</p>
+            <div>
+              <label className={labelCls}>Login Email Address *</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-smoke" />
+                <input type="email" placeholder="email@domain.com" value={form.accountEmail}
+                  onChange={(e) => update("accountEmail", e.target.value)} className={`${inputCls} pl-9`} />
+              </div>
             </div>
 
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              By registering, you agree to our{" "}
-              <Link href="/terms" className="text-secondary font-semibold">Terms & Conditions</Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-secondary font-semibold">Privacy Policy</Link>.
-              Your seller account will be reviewed and approved within 24–48 hours.
-            </p>
+            <div>
+              <label className={labelCls}>Password *</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-smoke" />
+                <input type="password" placeholder="Min 8 characters" value={form.password}
+                  onChange={(e) => update("password", e.target.value)} className={`${inputCls} pl-9`} />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Confirm Password *</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-smoke" />
+                <input type="password" placeholder="Re-enter password" value={form.confirmPassword}
+                  onChange={(e) => update("confirmPassword", e.target.value)} className={`${inputCls} pl-9`} />
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ─── Step 4: Success ─── */}
+      {/* ─── Step 4: Verification Success page ─── */}
       {step === 4 && (
-        <div className="text-center py-8">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success/10 text-success mx-auto mb-5">
-            <CheckCircle2 className="h-10 w-10" />
+        <div className="text-center py-6">
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#C07840] bg-[#FDF0EB] text-[#C07840] mx-auto mb-6"
+          >
+            <Rocket className="h-10 w-10 animate-pulse" />
+          </motion.div>
+
+          <div className="flex items-center justify-center gap-1.5 text-center justify-center mb-2">
+            <Sparkles className="h-4.5 w-4.5 text-[#C07840]" />
+            <h2 className="text-2xl font-semibold text-charcoal">Registration Submitted!</h2>
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-3">Registration Submitted!</h2>
-          <p className="text-sm text-on-surface-variant max-w-md mx-auto mb-6 leading-relaxed">
-            Welcome to Andromeda, <strong>{form.businessName}</strong>! Your seller account has been
-            created and submitted for verification. Our team will review your application within
-            24–48 hours and send confirmation to <strong>{form.accountEmail}</strong>.
+
+          <p className="text-xs text-smoke font-light max-w-md mx-auto mb-8 leading-relaxed">
+            Welcome to Andromeda Atelier Network! Your application for <strong>{form.businessName}</strong> is pending review. Approval confirmation logs will dispatch to {form.accountEmail} within 24-48 hours.
           </p>
-          <div className="bg-surface-card rounded-xl border border-outline-variant p-5 max-w-sm mx-auto mb-6 text-left">
-            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">What happens next?</p>
-            <ol className="space-y-2">
-              {["Our team reviews your business details", "You receive a verification email", "Your seller badge is activated", "Start listing products!"].map((s, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-xs text-on-surface-variant">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/10 text-success text-[10px] font-bold">{i + 1}</span>
-                  {s}
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-primary text-white px-6 py-3 text-sm font-bold hover:opacity-90 transition-opacity">
-              Sign In to Dashboard
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/" className="inline-flex items-center gap-2 rounded-xl border border-outline-variant px-6 py-3 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors">
-              Back to Home
+
+          <div className="flex justify-center gap-4">
+            <Link 
+              href="/login" 
+              className="rounded bg-[#8B3A52] hover:bg-[#C4607A] text-[#FAF6F2] px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
+            >
+              Go to Seller Dashboard <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -607,54 +471,52 @@ function RegisterForm() {
 
       {/* Navigation Buttons */}
       {step !== 4 && (
-        <div className={`mt-8 flex ${step > 1 ? "justify-between" : "justify-end"}`}>
+        <div className={`mt-10 pt-5 border-t border-[#E8D8CE]/40 flex ${step > 1 ? "justify-between" : "justify-end"}`}>
           {step > 1 && (
             <button
               onClick={() => { setError(null); setStep((prev) => (prev - 1) as Step); }}
-              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant px-5 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded border border-[#E8D8CE] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-smoke hover:bg-[#FAF6F2] transition-colors cursor-pointer"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Back
+              <ChevronLeft className="h-4 w-4" /> Back
             </button>
           )}
-          {step < 3 && (
+
+          {step < 3 ? (
             <button
               onClick={handleNext}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary text-white px-5 py-2.5 text-sm font-bold hover:opacity-90 transition-opacity cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded bg-[#8B3A52] hover:bg-[#C4607A] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
             >
-              Continue
-              <ChevronRight className="h-4 w-4" />
+              Continue <ChevronRight className="h-4 w-4" />
             </button>
-          )}
-          {step === 3 && (
+          ) : (
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-success text-white px-6 py-2.5 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded bg-[#1D9E75] hover:bg-[#1D9E75]/90 text-white px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-4.5 w-4.5" />
               )}
-              {loading ? "Registering..." : "Complete Registration"}
+              Complete Setup
             </button>
           )}
         </div>
       )}
+
     </div>
   );
 }
 
-// Outer page wraps in Suspense for useSearchParams
 export default function SellerRegisterPage() {
   return (
-    <div className="flex flex-col items-center w-full min-h-full bg-surface py-4">
+    <div className="flex flex-col items-center w-full min-h-full bg-[#FAF6F2] py-8 px-4">
       <Suspense fallback={
-        <div className="animate-pulse flex flex-col items-center gap-4 py-16 w-full max-w-2xl px-4">
-          <div className="h-8 w-48 bg-surface-container rounded" />
-          <div className="h-4 w-32 bg-surface-container rounded" />
-          <div className="h-64 w-full bg-surface-container rounded-xl" />
+        <div className="animate-pulse flex flex-col items-center gap-4 py-16 w-full max-w-2xl px-4 bg-white border border-[#E8D8CE] rounded-xl">
+          <div className="h-8 w-48 bg-zinc-200 rounded" />
+          <div className="h-4 w-32 bg-zinc-200 rounded" />
+          <div className="h-64 w-full bg-zinc-200 rounded" />
         </div>
       }>
         <RegisterForm />

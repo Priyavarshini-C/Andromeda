@@ -195,7 +195,7 @@ export default function ProfileEditorClient({ seller }: Props) {
               className="w-full rounded-lg border border-outline-variant/50 bg-surface px-3 py-2.5 text-xs font-mono text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary resize-none"
             />
             <p className="mt-1 text-[10px] text-on-surface-variant">
-              Format: keys are day ranges (mon-sat, sun), values are time ranges (10:00-21:00) or "closed".
+              {"Format: keys are day ranges (mon-sat, sun), values are time ranges (10:00-21:00) or \"closed\"."}
             </p>
           </div>
         </fieldset>

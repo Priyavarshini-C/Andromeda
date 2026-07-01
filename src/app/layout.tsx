@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { Instrument_Serif, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CompareBar from "@/components/compare/CompareBar";
 import { SessionProvider } from "next-auth/react";
 import { AIAssistantButton } from "@/components/AIAssistantButton";
+
+const serifFont = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+});
+
+const sansFont = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Andromeda — Product Discovery & Comparison Platform",
@@ -17,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" className={`h-full antialiased dark ${serifFont.variable} ${sansFont.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

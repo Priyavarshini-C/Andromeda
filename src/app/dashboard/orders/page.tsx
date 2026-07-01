@@ -2,6 +2,7 @@
 // Andromeda — Seller Orders Management Overview Page (Server Component)
 // =============================================================================
 
+import { Suspense } from "react";
 import { listSellerOrders } from "@/lib/actions/seller";
 import OrdersClient from "@/components/dashboard/OrdersClient";
 import { auth } from "@/lib/auth";
@@ -12,13 +13,30 @@ export const metadata = {
   description: "Manage orders placed with your store.",
 };
 
-export default async function SellerOrdersPage() {
+export default function SellerOrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-surface">
+          <div className="animate-pulse space-y-4 text-center">
+            <div className="h-8 w-48 bg-surface-container rounded mx-auto" />
+            <div className="text-xs text-on-surface-variant animate-bounce">Loading orders...</div>
+          </div>
+        </div>
+      }
+    >
+      <SellerOrdersPageContent />
+    </Suspense>
+  );
+}
+
+async function SellerOrdersPageContent() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
   }
 
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "seller" && role !== "admin") {
     redirect("/");
   }

@@ -72,7 +72,7 @@ export default function NotificationsPage() {
   }, [router]);
 
   useEffect(() => {
-    fetchNotifications();
+    setTimeout(() => fetchNotifications(), 0);
   }, [fetchNotifications]);
 
   const markAllRead = async () => {

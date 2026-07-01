@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // 5. Map entries to WishlistItem format
-    const items = dbWishlist.map(({ wishlist, product, category, seller }) => {
+    const items = dbWishlist.map(({ wishlist, product, category, seller }: any) => {
       const discountPct = product.originalPrice && product.originalPrice > product.price
         ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
         : 0;

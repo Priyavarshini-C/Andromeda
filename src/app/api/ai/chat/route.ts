@@ -61,7 +61,7 @@ async function getRelevantProducts(userMessage: string) {
       .where(
         and(
           eq(products.status, "active"),
-          or(...conditions) as any
+          or(...conditions)
         )
       )
       .limit(5);
@@ -69,7 +69,7 @@ async function getRelevantProducts(userMessage: string) {
     const results = await query;
 
     return maxPrice
-      ? results.filter((p) => p.price <= maxPrice)
+      ? results.filter((p: any) => p.price <= maxPrice)
       : results;
   } catch {
     return [];
@@ -107,7 +107,7 @@ What would you like to explore?`;
 
   if (relevantProducts.length > 0) {
     const productList = relevantProducts
-      .map((p, i) => {
+      .map((p: any, i: number) => {
         const discount =
           p.originalPrice && p.originalPrice > p.price
             ? ` ~~₹${p.originalPrice.toLocaleString("en-IN")}~~`

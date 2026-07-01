@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = session.user.id;
-    const role = (session.user as any).role;
+    const role = session.user.role;
 
     if (role === "seller") {
       // 1. Fetch seller profile first
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
       // Fetch items for each order
       const ordersWithItems = await Promise.all(
-        sellerOrders.map(async (order) => {
+        sellerOrders.map(async (order: any) => {
           const items = await db
             .select()
             .from(orderItems)
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(orders.createdAt));
 
       const ordersWithItems = await Promise.all(
-        customerOrders.map(async (order) => {
+        customerOrders.map(async (order: any) => {
           const items = await db
             .select()
             .from(orderItems)
@@ -153,9 +153,9 @@ export async function POST(request: NextRequest) {
     const createdOrderIds: string[] = [];
 
     // 4. Run order creation transaction
-    await db.transaction(async (tx) => {
-      for (const [sellerId, items] of Object.entries(itemsBySeller)) {
-        const subtotal = items.reduce((sum, item) => sum + item.product.price * item.cart.quantity, 0);
+    await db.transaction(async (tx: any) => {
+      for (const [sellerId, items] of Object.entries(itemsBySeller) as [string, any[]][]) {
+        const subtotal = items.reduce((sum: number, item: any) => sum + item.product.price * item.cart.quantity, 0);
         const shipping = subtotal > 1000 ? 0 : 99;
         const total = subtotal + shipping;
 

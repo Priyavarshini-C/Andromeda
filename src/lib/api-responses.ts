@@ -13,7 +13,7 @@ export type ErrorCode =
   | "RATE_LIMITED"
   | "SERVER_ERROR";
 
-export function successResponse<T>(data: T, meta?: any, status = 200) {
+export function successResponse<T>(data: T, meta?: Record<string, unknown> | null, status = 200) {
   return NextResponse.json(
     {
       data,

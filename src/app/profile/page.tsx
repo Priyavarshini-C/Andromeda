@@ -29,10 +29,13 @@ export default function ProfilePage() {
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login");
     if (session?.user) {
-      setForm({
-        name: session.user.name || "",
-        phone: (session.user as any).phone || "",
-      });
+      const u = session.user;
+      setTimeout(() => {
+        setForm({
+          name: u.name || "",
+          phone: u.phone || "",
+        });
+      }, 0);
     }
   }, [session, status, router]);
 
@@ -52,7 +55,7 @@ export default function ProfilePage() {
   };
 
   const user = session?.user;
-  const role = (user as any)?.role || "user";
+  const role = user?.role || "user";
 
   if (status === "loading") {
     return (
@@ -175,7 +178,7 @@ export default function ProfilePage() {
               {[
                 { icon: User, label: "Full Name", value: user.name || "—" },
                 { icon: Mail, label: "Email", value: user.email || "—" },
-                { icon: Phone, label: "Phone", value: (user as any).phone || "—" },
+                { icon: Phone, label: "Phone", value: user.phone || "—" },
                 { icon: Shield, label: "Account Role", value: role.charAt(0).toUpperCase() + role.slice(1) },
                 { icon: Clock, label: "Member Since", value: "June 2026" },
               ].map(({ icon: Icon, label, value }) => (

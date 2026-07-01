@@ -23,13 +23,13 @@ export async function GET() {
       .from(categories);
 
     // Filter parent categories (no parentId)
-    const parents = allCategories.filter((c) => !c.parentId);
-    const children = allCategories.filter((c) => c.parentId);
+    const parents = allCategories.filter((c: any) => !c.parentId);
+    const children = allCategories.filter((c: any) => c.parentId);
 
-    const data = parents.map((parent) => {
+    const data = parents.map((parent: any) => {
       const parentChildren = children
-        .filter((child) => child.parentId === parent.id)
-        .map((child) => ({
+        .filter((child: any) => child.parentId === parent.id)
+        .map((child: any) => ({
           id: child.id,
           name: child.name,
           slug: child.slug,
@@ -37,7 +37,7 @@ export async function GET() {
         }));
 
       // Parent's count is the sum of its own products plus its subcategories' products
-      const childrenSum = parentChildren.reduce((sum, c) => sum + c.product_count, 0);
+      const childrenSum = parentChildren.reduce((sum: number, c: any) => sum + c.product_count, 0);
       const totalCount = parent.productCount + childrenSum;
 
       return {

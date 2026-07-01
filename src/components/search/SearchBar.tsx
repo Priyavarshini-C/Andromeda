@@ -18,14 +18,11 @@ export default function SearchBar() {
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search suggestions fetch
   useEffect(() => {
     if (query.trim().length < 2) {
-      setSuggestions([]);
       return;
     }
 
-    setIsLoading(true);
     const delayDebounceFn = setTimeout(async () => {
       try {
         const response = await fetch(
@@ -112,17 +109,24 @@ export default function SearchBar() {
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const val = e.target.value;
+            setQuery(val);
             setIsOpen(true);
             setActiveIndex(-1);
+            if (val.trim().length < 2) {
+              setSuggestions([]);
+              setIsLoading(false);
+            } else {
+              setIsLoading(true);
+            }
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search products, brands, or local shops..."
-          className="w-full h-11 pl-11 pr-10 text-sm bg-white text-on-surface border border-outline-variant rounded-lg outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20 transition-all placeholder:text-on-surface-variant/60"
+          placeholder="Search products, brands, or local ateliers..."
+          className="w-full h-12 pl-12 pr-10 text-xs tracking-wider bg-neutral-900/60 text-white border border-white/5 rounded-full outline-none focus:border-white/20 focus:ring-1 focus:ring-white/10 transition-all placeholder:text-white/30"
         />
         {/* Left Search Icon */}
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-secondary" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
 
         {/* Clear/Loader Button */}
         {isLoading ? (
@@ -133,6 +137,7 @@ export default function SearchBar() {
             onClick={() => {
               setQuery("");
               setSuggestions([]);
+              setIsLoading(false);
             }}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
           >
@@ -143,13 +148,13 @@ export default function SearchBar() {
 
       {/* Autocomplete Suggestions Panel */}
       {isOpen && (query.trim().length >= 2 || suggestions.length > 0) && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full max-h-96 overflow-y-auto bg-white rounded-lg border border-outline-variant shadow-observatory-lifted py-2">
+        <div className="absolute top-full left-0 z-50 mt-2 w-full max-h-96 overflow-y-auto bg-[#0E0E10]/95 backdrop-blur-md rounded-2xl border border-white/5 shadow-2xl py-3 text-white">
           {suggestions.length > 0 ? (
             <div>
-              <div className="px-3.5 py-1 text-[10px] font-bold text-on-surface-variant tracking-wider uppercase">
+              <div className="px-5 py-1 text-[9px] font-bold text-white/40 tracking-widest uppercase">
                 Suggestions
               </div>
-              <ul className="mt-1">
+              <ul className="mt-2 space-y-0.5">
                 {suggestions.map((item, index) => {
                   let Icon = Tag;
                   if (item.type === "product") Icon = Smartphone;
@@ -161,20 +166,20 @@ export default function SearchBar() {
                       <button
                         type="button"
                         onClick={() => handleSuggestionClick(item)}
-                        className={`w-full text-left px-3.5 py-2 flex items-center gap-3 transition-colors ${
-                          activeIndex === index ? "bg-slate-100" : "hover:bg-slate-50"
+                        className={`w-full text-left px-5 py-2.5 flex items-center gap-3 transition-colors ${
+                          activeIndex === index ? "bg-white/10" : "hover:bg-white/5"
                         }`}
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-slate-100 text-slate-500">
+                        <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5 text-white/50">
                           {item.thumbnail ? (
-                            <img src={item.thumbnail} alt="" className="h-7 w-7 object-cover rounded-sm" />
+                            <img src={item.thumbnail} alt="" className="h-8 w-8 object-cover rounded" />
                           ) : (
                             <Icon className="h-4 w-4" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-primary">{item.label}</p>
-                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                          <p className="text-xs font-semibold text-white/95 tracking-wide">{item.label}</p>
+                          <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-0.5">
                             {item.type}
                           </p>
                         </div>

@@ -49,7 +49,7 @@ async function InventoryContent() {
 
   return (
     <InventoryClient
-      products={sellerProducts.map((p) => ({
+      products={sellerProducts.map((p: any) => ({
         id: p.id,
         title: p.title,
         slug: p.slug,

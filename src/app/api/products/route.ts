@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     
     // Parse query parameters
-    const queryParams: Record<string, any> = {};
+    const queryParams: Record<string, unknown> = {};
     searchParams.forEach((value, key) => {
       if (key === "inStock" || key === "isFeatured") {
         queryParams[key] = value === "true";
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // Map database results to ProductCard format
-    const hits = dbProducts.map(({ product, category, seller }) => {
+    const hits = dbProducts.map(({ product, category, seller }: any) => {
       const discountPct = product.originalPrice && product.originalPrice > product.price
         ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
         : 0;

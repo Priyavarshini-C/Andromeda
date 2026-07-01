@@ -3,21 +3,39 @@
 // Server Component — /admin
 // =============================================================================
 
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getAdminStats, listSellers, listRecentOrders, listUsers } from "@/lib/actions/admin";
-import { AdminDashboardClient } from "./AdminDashboardClient";
+import { AdminDashboardClient, Seller, Order, User } from "./AdminDashboardClient";
 
 export const metadata = {
   title: "Admin Dashboard | Andromeda",
   description: "Platform administration and management console",
 };
 
-export default async function AdminPage() {
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-surface">
+          <div className="animate-pulse space-y-4 text-center">
+            <div className="h-8 w-48 bg-surface-container rounded mx-auto" />
+            <div className="text-xs text-on-surface-variant animate-bounce">Loading admin console...</div>
+          </div>
+        </div>
+      }
+    >
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+async function AdminPageContent() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const role = (session.user as any).role;
+  const role = session.user.role;
   if (role !== "admin") redirect("/");
 
   // Fetch all data in parallel
@@ -37,9 +55,9 @@ export default async function AdminPage() {
   return (
     <AdminDashboardClient
       stats={stats}
-      sellers={sellers as any[]}
-      recentOrders={orders as any[]}
-      recentUsers={users as any[]}
+      sellers={sellers as Seller[]}
+      recentOrders={orders as Order[]}
+      recentUsers={users as User[]}
     />
   );
 }

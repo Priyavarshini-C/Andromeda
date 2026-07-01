@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       .where(whereClause);
 
     // Compute distances and filter
-    let enriched = dbSellers.map((s) => {
+    let enriched = dbSellers.map((s: any) => {
       let distanceKm: number | null = null;
       if (lat !== null && lng !== null && s.latitude !== null && s.longitude !== null) {
         distanceKm = haversineKm(lat, lng, s.latitude, s.longitude);
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     // Filter by distance if user location is provided
     if (lat !== null && lng !== null) {
       enriched = enriched.filter(
-        (s) => s.distanceKm !== null && s.distanceKm <= maxDistanceKm
+        (s: any) => s.distanceKm !== null && s.distanceKm <= maxDistanceKm
       );
     }
 
@@ -115,18 +115,18 @@ export async function GET(request: NextRequest) {
           .where(and(eq(products.categoryId, cat[0].id), eq(products.status, "active")))
           .groupBy(products.sellerId);
 
-        const validIds = new Set(sellerIdsInCategory.map((r) => r.sellerId));
-        enriched = enriched.filter((s) => validIds.has(s.id));
+        const validIds = new Set(sellerIdsInCategory.map((r: any) => r.sellerId));
+        enriched = enriched.filter((s: any) => validIds.has(s.id));
       }
     }
 
     // Sort
     if (sortBy === "distance" && lat !== null && lng !== null) {
-      enriched.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+      enriched.sort((a: any, b: any) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
     } else if (sortBy === "rating") {
-      enriched.sort((a, b) => b.rating - a.rating);
+      enriched.sort((a: any, b: any) => b.rating - a.rating);
     } else {
-      enriched.sort((a, b) => a.businessName.localeCompare(b.businessName));
+      enriched.sort((a: any, b: any) => a.businessName.localeCompare(b.businessName));
     }
 
     // Paginate
